@@ -27,7 +27,7 @@ import { iconImage } from '../ui/images.js';
 import { LabelSprite } from './LabelSprite.js';
 import { plotShellGeometry } from './PlotShell.js';
 import { createStandVfx } from './StandVfx.js';
-import { TextPlane, outlinedText, roundedRect } from './TextPlane.js';
+import { TextPlane, UI_FONT, outlinedText, roundedRect } from './TextPlane.js';
 
 /** What one stand shows, as replicated. */
 export interface StandData {
@@ -189,7 +189,8 @@ class StandView {
       this.pad.mesh.position.set(0, (this.spot.upper ? PLOT.deckTop : PLOT.floorTop) - this.spot.y + 0.07, PLOT.padOffset);
       this.root.add(this.pad.mesh);
       this.board = new TextPlane(4.4, 1.15, 72);
-      this.board.mesh.position.set(0, -0.62, PLOT.standSize / 2 + 0.03);
+      // In front of the pedestal cap's overhang (standSize + 0.3), not inside it.
+      this.board.mesh.position.set(0, -0.62, PLOT.standSize / 2 + 0.2);
       this.root.add(this.board.mesh);
     }
     const cost = levelUpCost(unit);
@@ -269,12 +270,12 @@ export class PlotView {
       this.root.add(stand.root);
     }
     this.banner = new TextPlane(26, 5, 40);
-    // Facing out to the plaza (plot -Z), under the arch.
-    this.banner.mesh.position.set(0, 14.6, -0.05);
+    // Facing out to the plaza (plot -Z), hanging free over the hall's front.
+    this.banner.mesh.position.set(0, 14.6, -0.35);
     this.banner.mesh.rotation.y = Math.PI;
     this.root.add(this.banner.mesh);
     this.bannerBack = new Mesh(this.banner.mesh.geometry, this.banner.mesh.material);
-    this.bannerBack.position.set(0, 14.6, 1.45);
+    this.bannerBack.position.set(0, 14.6, 1.75);
     this.root.add(this.bannerBack);
     this.centre.set(placement.x, 6, placement.z);
     const inward = { x: Math.sin(placement.yaw), z: Math.cos(placement.yaw) };
@@ -333,28 +334,30 @@ export class PlotView {
 
   private drawBanner(): void {
     const owner = this.owner;
-    const face = owner?.avatarUrl ? portraitFor(owner.avatarUrl, () => {
+    const photo = owner?.avatarUrl ? portraitFor(owner.avatarUrl, () => {
       this.banner.invalidate();
       this.drawBanner();
     }) : null;
-    const key = owner ? `${owner.name}|${owner.rebirths}|${owner.avatarUrl}|${face ? 1 : 0}` : 'empty';
+    const key = owner ? `${owner.name}|${owner.rebirths}|${owner.avatarUrl}|${photo ? 1 : 0}` : 'empty';
+    // No panel or border: the profile picture and the outlined lines hang free
+    // over the hall's front, centred as one group. Every owner has a picture:
+    // their Bloxity portrait once it has loaded, else a badge with their initial.
     this.banner.draw(key, (ctx, w, h) => {
-      ctx.fillStyle = owner ? 'rgba(24, 32, 78, 0.94)' : 'rgba(24, 32, 78, 0.6)';
-      roundedRect(ctx, w * 0.01, h * 0.04, w * 0.98, h * 0.92, h * 0.3);
-      ctx.fill();
-      ctx.lineWidth = h * 0.06;
-      ctx.strokeStyle = owner?.local ? '#ffd23a' : '#8f9ed4';
-      ctx.stroke();
       if (!owner) {
-        outlinedText(ctx, 'Empty Plot', w / 2, h / 2, h * 0.5, '#aab4d8', w * 0.8);
+        outlinedText(ctx, 'Empty Plot', w / 2, h / 2, h * 0.5, '#aab4d8', w * 0.8, '#0b1030');
         return;
       }
       const name = visibleName(owner.name);
-      const faceSize = h * 0.7;
-      if (face) drawPortrait(ctx, face, w * 0.06, h / 2, faceSize);
-      const textX = w * 0.06 + (face ? faceSize + h * 0.2 : 0);
+      const subtitle = owner.rebirths > 0 ? `Rebirth ${owner.rebirths}` : 'Collector';
+      const faceSize = h * 0.8;
+      const gap = faceSize + h * 0.16;
+      const textWidth = Math.min(w * 0.6, Math.max(textSpan(ctx, name, h * 0.42), textSpan(ctx, subtitle, h * 0.26)));
+      const left = (w - gap - textWidth) / 2;
+      if (photo) drawPortrait(ctx, photo, left, h / 2, faceSize);
+      else drawInitialBadge(ctx, name, left, h / 2, faceSize);
+      const textX = left + gap;
       outlinedText(ctx, name, textX, h * 0.38, h * 0.42, '#ffffff', w * 0.6, '#0b1030', 'left');
-      outlinedText(ctx, owner.rebirths > 0 ? `Rebirth ${owner.rebirths}` : 'Collector', textX, h * 0.74, h * 0.26, owner.local ? '#ffd23a' : '#bfe0ff', w * 0.5, '#0b1030', 'left');
+      outlinedText(ctx, subtitle, textX, h * 0.74, h * 0.26, owner.local ? '#ffd23a' : '#bfe0ff', w * 0.5, '#0b1030', 'left');
     });
   }
 
@@ -365,3 +368,32 @@ export class PlotView {
     this.root.removeFromParent();
   }
 }
+
+/** The width `outlinedText` gives a line at this size, before any shrinking to fit. */
+const textSpan = (ctx: CanvasRenderingContext2D, text: string, size: number): number => {
+  ctx.font = `700 ${size}px ${UI_FONT}`;
+  return ctx.measureText(text).width;
+};
+
+/** Badge colours for owners without a portrait, picked by name so each keeps theirs. */
+const BADGE_COLOURS = ['#4f8ff7', '#f25c7a', '#35c47a', '#f5a524', '#9b6cf2', '#23b5c8'] as const;
+
+/**
+ * The stand-in profile picture: a round badge with the owner's initial, in the
+ * same circle-and-ring shape as a real portrait, so the banner reads the same
+ * whether or not the portal has a picture of them.
+ */
+const drawInitialBadge = (ctx: CanvasRenderingContext2D, name: string, x: number, centreY: number, size: number): void => {
+  let hash = 0;
+  for (const ch of name) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+  const radius = size / 2;
+  ctx.beginPath();
+  ctx.arc(x + radius, centreY, radius, 0, Math.PI * 2);
+  ctx.fillStyle = BADGE_COLOURS[hash % BADGE_COLOURS.length]!;
+  ctx.fill();
+  ctx.lineWidth = Math.max(1, size * 0.06);
+  ctx.strokeStyle = 'rgba(3, 8, 14, 0.85)';
+  ctx.stroke();
+  const initial = (name.trim()[0] ?? '?').toUpperCase();
+  outlinedText(ctx, initial, x + radius, centreY + size * 0.03, size * 0.58, '#ffffff', size * 0.8, '#0b1030');
+};

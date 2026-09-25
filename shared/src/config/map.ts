@@ -18,6 +18,8 @@ import { DISPLAY_SLOTS } from './display.js';
  *    plot's own escalator.
  *  - Shops (Upgrades, Sell Units) south of the terrace; leaderboards north; the
  *    dice monument east; the fountain garden west.
+ *  - ONE LOOP TRACK (a flat moving conveyor) runs past every plot, in to the
+ *    tower and round it, and back out.
  */
 
 // ------------------------------------------------------------------ world
@@ -286,24 +288,11 @@ export const FOUNTAIN = { x: -94, z: -44, radius: 12 } as const;
 // -------------------------------------------------------------- avenues
 
 /**
- * THE FOUR AVENUES: from the terrace out between the plot rows, each a tiled
- * path carrying a pair of MOVING WALKWAYS (flat escalators): the lane on the
- * avenue's centre line carries players IN toward the tower, the lane beside
- * it carries them OUT toward the plots. Same ramp + conveyor as the
- * escalators, so the simulation needs nothing new.
+ * THE FOUR AVENUES: tiled walking paths from the terrace out between the plot
+ * rows. The loop track crosses every one of them.
  */
 export const AVENUE = {
-  /** Walkways run from this distance from the centre... */
-  from: 66,
-  /** ...to this one (just inside the plot ring). */
-  to: 142,
-  laneHalf: 3.5,
-  /** Centre of the outbound lane, sideways from the inbound one. */
-  outboundOffset: 11,
-  /** Height of the walkway deck above the plaza. */
-  top: 0.3,
-  speed: 13,
-  /** Half-width of the tiled path under the walkways. */
+  /** Half-width of the tiled path. */
   pathHalf: 18,
 } as const;
 
@@ -311,7 +300,7 @@ export interface AvenueDir {
   /** Outward unit vector. */
   readonly ux: number;
   readonly uz: number;
-  /** Sideways unit vector: the outbound lane lies this way. */
+  /** Sideways unit vector. */
   readonly lx: number;
   readonly lz: number;
 }
@@ -323,32 +312,99 @@ export const AVENUE_DIRS: readonly AvenueDir[] = [
   { ux: -1, uz: 0, lx: 0, lz: 1 },
 ];
 
-/** One lane as a flat escalator: centred `lateral` units to the side, carried inward or outward. */
-const lane = (dir: AvenueDir, lateral: number, inbound: boolean): EscalatorDef => {
-  const A = AVENUE;
-  const alongZ = dir.uz !== 0;
-  const sign = alongZ ? dir.uz : dir.ux;
-  const nearEnd = sign * A.from;
-  const farEnd = sign * A.to;
-  const side = alongZ ? dir.lx * lateral : dir.lz * lateral;
-  const along = [Math.min(nearEnd, farEnd), Math.max(nearEnd, farEnd)] as const;
-  const across = [side - A.laneHalf, side + A.laneHalf] as const;
-  return {
-    minX: alongZ ? across[0] : along[0],
-    maxX: alongZ ? across[1] : along[1],
-    minZ: alongZ ? along[0] : across[0],
-    maxZ: alongZ ? along[1] : across[1],
-    axis: alongZ ? 'z' : 'x',
-    low: inbound ? farEnd : nearEnd,
-    high: inbound ? nearEnd : farEnd,
-    y0: A.top,
-    y1: A.top,
-    speed: A.speed,
-  };
-};
+// ------------------------------------------------------------ loop track
 
-/** Every moving walkway: an inbound and an outbound lane per avenue. */
-export const WALKWAYS: readonly EscalatorDef[] = AVENUE_DIRS.flatMap((dir) => [lane(dir, 0, true), lane(dir, AVENUE.outboundOffset, false)]);
+/**
+ * THE LOOP: ONE closed, one-way moving track round the island. An OUTER ring
+ * runs past the front of every plot; at the north avenue it turns in, runs
+ * down one LEG to an INNER ring round the foot of the terrace, circles the
+ * tower, and comes back out up the other leg to where it began. No ends, so
+ * no dead end.
+ *
+ * It is a flat conveyor a step high with NO side walls: walk on or off
+ * anywhere along it. It is built from the same ramp + conveyor as the
+ * escalators (one flat `EscalatorDef` per straight), so the simulation needs
+ * nothing new. Each straight OWNS the corner square it leaves from and stops
+ * where the next corner square starts, so the pieces tile the track without
+ * overlapping and a rider reaching a corner is turned by the next straight.
+ */
+export const LOOP = {
+  /** Centre line of the outer ring, from the island centre (plot fronts are at 150). */
+  outer: 138,
+  /** Centre line of the inner ring (the terrace escalator feet are at 56). */
+  inner: 64,
+  /** The legs up the north avenue: centre lines at x = -legX (in) and +legX (out). */
+  legX: 9,
+  /** Half the track's width. */
+  half: 5,
+  /** Deck height above the plaza: one easy step. */
+  top: 0.3,
+  speed: 15,
+} as const;
+
+/** The loop's centre line, corner to corner, in travel order (it closes back to the first). */
+export const LOOP_WAYPOINTS: readonly { readonly x: number; readonly z: number }[] = (() => {
+  const { outer: O, inner: I, legX: L } = LOOP;
+  return [
+    // Out of the east leg and clockwise round the outer ring, past every plot...
+    { x: L, z: O },
+    { x: O, z: O },
+    { x: O, z: -O },
+    { x: -O, z: -O },
+    { x: -O, z: O },
+    { x: -L, z: O },
+    // ...in down the west leg, anticlockwise round the tower, and back out.
+    { x: -L, z: I },
+    { x: -I, z: I },
+    { x: -I, z: -I },
+    { x: I, z: -I },
+    { x: I, z: I },
+    { x: L, z: I },
+  ];
+})();
+
+/** A flat conveyor over [x0,x1] x [z0,z1] carrying along `axis` from `low` to `high`. */
+const flatConveyor = (x0: number, x1: number, z0: number, z1: number, axis: 'x' | 'z', low: number, high: number): EscalatorDef => ({
+  minX: Math.min(x0, x1),
+  maxX: Math.max(x0, x1),
+  minZ: Math.min(z0, z1),
+  maxZ: Math.max(z0, z1),
+  axis,
+  low,
+  high,
+  y0: LOOP.top,
+  y1: LOOP.top,
+  speed: LOOP.speed,
+});
+
+/**
+ * The loop as flat conveyors: per corner-to-corner run, the STRAIGHT (from the
+ * far side of its first corner square to the middle of the next one) and the
+ * CORNER PIECE (the rest of that square, carrying the new way). A rider is
+ * turned exactly on the next straight's centre line, so however far to one
+ * side they rode in, every corner hands them on in the middle of the track.
+ */
+export const LOOP_SEGMENTS: readonly EscalatorDef[] = LOOP_WAYPOINTS.flatMap((p, i) => {
+  const n = LOOP_WAYPOINTS.length;
+  const q = LOOP_WAYPOINTS[(i + 1) % n]!;
+  const r = LOOP_WAYPOINTS[(i + 2) % n]!;
+  const h = LOOP.half;
+  if (p.z === q.z) {
+    // Running along x; the next run is along z.
+    const dir = Math.sign(q.x - p.x);
+    const turn = Math.sign(r.z - q.z);
+    return [
+      flatConveyor(p.x + dir * h, q.x, p.z - h, p.z + h, 'x', p.x + dir * h, q.x),
+      flatConveyor(q.x, q.x + dir * h, q.z - h, q.z + h, 'z', q.z - turn * h, q.z + turn * h),
+    ];
+  }
+  const dir = Math.sign(q.z - p.z);
+  const turn = Math.sign(r.x - q.x);
+  return [
+    flatConveyor(p.x - h, p.x + h, p.z + dir * h, q.z, 'z', p.z + dir * h, q.z),
+    flatConveyor(q.x - h, q.x + h, q.z, q.z + dir * h, 'x', q.x - turn * h, q.x + turn * h),
+  ];
+});
 
 // ---------------------------------------------------------------- solids
 
@@ -386,9 +442,8 @@ export const buildStaticSolids = (): Aabb[] => {
   solids.push(box(-R, R, TERRACE.top, TERRACE.top + TOWER.height, -r, r));
   solids.push(box(-r, r, TERRACE.top, TERRACE.top + TOWER.height, -R, R));
 
-  // Terrace escalators and avenue walkways: side panels.
+  // Terrace escalators: side panels. The loop track has none: it is open along its length.
   for (const e of TERRACE_ESCALATORS) solids.push(...escalatorSides(e));
-  for (const e of WALKWAYS) solids.push(...escalatorSides(e));
 
   // Stalls: the counter building behind the front zone.
   for (const stall of STALLS) {
@@ -461,16 +516,13 @@ export const plotSolids = (plot: PlotPlacement): Aabb[] => {
   out.push(plotBox(plot, -W, -W + rail, P.deckTop, railTop, P.deckFront, P.depth));
   out.push(plotBox(plot, W - rail, W, P.deckTop, railTop, P.deckFront, P.depth));
   out.push(plotBox(plot, -W, W, P.deckTop, railTop, P.depth - rail, P.depth));
-  // The entrance arch posts.
-  out.push(plotBox(plot, -W, -W + 1.4, P.floorTop, 18, 0, 1.4));
-  out.push(plotBox(plot, W - 1.4, W, P.floorTop, 18, 0, 1.4));
   // The escalator's side panels (the ramp itself is not a box).
   out.push(...escalatorSides(plotEscalator(plot)));
   return out;
 };
 
 /** Every ramp (escalator) in the world. */
-export const buildRamps = (): EscalatorDef[] => [...TERRACE_ESCALATORS, ...WALKWAYS, ...PLOTS.map(plotEscalator)];
+export const buildRamps = (): EscalatorDef[] => [...TERRACE_ESCALATORS, ...LOOP_SEGMENTS, ...PLOTS.map(plotEscalator)];
 
 export const worldBounds = (): Aabb => box(-WORLD_HALF, WORLD_HALF, -100, 400, -WORLD_HALF, WORLD_HALF);
 

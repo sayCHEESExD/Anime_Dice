@@ -7,8 +7,10 @@ import {
   TERRACE_ESCALATORS,
   AVENUE,
   AVENUE_DIRS,
+  LOOP,
+  LOOP_SEGMENTS,
+  LOOP_WAYPOINTS,
   PLOT,
-  WALKWAYS,
   TERRACE_STAIRS,
   TOWER,
   WORLD_HALF,
@@ -50,8 +52,8 @@ export class DiceWorld {
   readonly root = new Group();
   readonly scoreboard = new Scoreboard();
   readonly steps: EscalatorSteps;
-  /** The avenues' moving walkways: the same treads, scrolled at the walkway speed. */
-  readonly walkways: EscalatorSteps;
+  /** The loop track: the same treads, scrolled at the loop speed. */
+  readonly loop: EscalatorSteps;
 
   private readonly disposables: (BufferGeometry | Material | Texture)[] = [];
   private readonly signs: CanvasSign[] = [];
@@ -70,22 +72,14 @@ export class DiceWorld {
     this.buildPalms(parts);
     this.buildLamps(parts);
     for (const e of TERRACE_ESCALATORS) buildEscalatorFrame(parts, e);
-    for (const e of WALKWAYS) {
-      buildEscalatorFrame(parts, e);
-      // The walkway deck under the moving treads.
-      parts.box(e.maxX - e.minX, AVENUE.top, e.maxZ - e.minZ, 0x3a4058, 'smooth', {
-        x: (e.minX + e.maxX) / 2,
-        y: AVENUE.top / 2,
-        z: (e.minZ + e.maxZ) / 2,
-      });
-    }
+    this.buildLoop(parts);
     const merged = parts.build('hub-parts');
     this.root.add(merged);
 
     this.steps = new EscalatorSteps([...TERRACE_ESCALATORS, ...PLOTS.map(plotEscalator)]);
     this.root.add(this.steps.mesh);
-    this.walkways = new EscalatorSteps(WALKWAYS);
-    this.root.add(this.walkways.mesh);
+    this.loop = new EscalatorSteps(LOOP_SEGMENTS);
+    this.root.add(this.loop.mesh);
 
     this.portalTexture = worldTextures.portal('#7a3cff', '#3ad8ff').clone();
     this.portalTexture.needsUpdate = true;
@@ -99,7 +93,7 @@ export class DiceWorld {
   update(delta: number): void {
     this.time += delta;
     this.steps.update(delta, ESCALATOR_SPEED);
-    this.walkways.update(delta, AVENUE.speed);
+    this.loop.update(delta, LOOP.speed);
     this.portalTexture.offset.y = (this.time * 0.35) % 1;
     this.dice.rotation.y += delta * 0.35;
     this.dice.rotation.x = Math.sin(this.time * 0.5) * 0.25 + 0.6;
@@ -130,20 +124,19 @@ export class DiceWorld {
     plaza.receiveShadow = true;
     this.root.add(plaza);
 
-    // The avenues: a pale-blue tiled path out to each plot row, under its walkways,
-    // and a ring path round the foot of the terrace joining them.
+    // The avenues: a pale-blue tiled path out to each plot row, and a ring path
+    // round the foot of the terrace joining them.
     const pathTiles = this.lambert(worldTextures.tiles('#dfeafc', '#aebfe6', '#ffffff'));
     const A = AVENUE;
     const pathLength = PLOT.inner - TERRACE.half;
     const pathMid = (PLOT.inner + TERRACE.half) / 2;
-    const lateralMid = A.outboundOffset / 2;
     const pathWidth = A.pathHalf * 2;
     for (const dir of AVENUE_DIRS) {
       const alongZ = dir.uz !== 0;
       const w = alongZ ? pathWidth : pathLength;
       const d = alongZ ? pathLength : pathWidth;
       const path = new Mesh(this.geometry(texturedBox(w, 0.08, d, 4)), pathTiles);
-      path.position.set(dir.ux * pathMid + dir.lx * lateralMid, 0.1, dir.uz * pathMid + dir.lz * lateralMid);
+      path.position.set(dir.ux * pathMid, 0.1, dir.uz * pathMid);
       path.receiveShadow = true;
       this.root.add(path);
     }
@@ -158,6 +151,63 @@ export class DiceWorld {
       band.position.set(x, 0.09, z);
       band.receiveShadow = true;
       this.root.add(band);
+    }
+  }
+
+  // ------------------------------------------------------------------ loop
+
+  /**
+   * The loop track: a low deck under the scrolling treads, edged on both sides
+   * by one unbroken light curb. The curbs follow the track's two edges round
+   * every corner; each is laid as butt-jointed straights (the x-running piece
+   * takes an outside corner, the z-running piece an inside one) so no two
+   * pieces overlap. Visual only: the track is open to walk on and off.
+   */
+  private buildLoop(b: PartBuilder): void {
+    const top = LOOP.top;
+    for (const e of LOOP_SEGMENTS) {
+      b.box(e.maxX - e.minX, top, e.maxZ - e.minZ, 0x3a4058, 'smooth', { x: (e.minX + e.maxX) / 2, y: top / 2, z: (e.minZ + e.maxZ) / 2 });
+    }
+    const w = 0.6;
+    const height = top + 0.06;
+    const n = LOOP_WAYPOINTS.length;
+    const dirs = LOOP_WAYPOINTS.map((p, i) => {
+      const q = LOOP_WAYPOINTS[(i + 1) % n]!;
+      return { x: Math.sign(q.x - p.x), z: Math.sign(q.z - p.z) };
+    });
+    for (const side of [1, -1]) {
+      // This edge's outward normal for a straight heading d.
+      const normal = (d: { x: number; z: number }) => ({ x: side * d.z, z: -side * d.x });
+      const corners = LOOP_WAYPOINTS.map((p, i) => {
+        const a = normal(dirs[(i + n - 1) % n]!);
+        const c = normal(dirs[i]!);
+        return { x: p.x + LOOP.half * (a.x + c.x), z: p.z + LOOP.half * (a.z + c.z) };
+      });
+      for (let i = 0; i < n; i += 1) {
+        const d = dirs[i]!;
+        const out = normal(d);
+        const from = corners[i]!;
+        const to = corners[(i + 1) % n]!;
+        // Convex where the edge's outward normal turns away from the next/previous straight.
+        const startConvex = out.x * dirs[(i + n - 1) % n]!.x + out.z * dirs[(i + n - 1) % n]!.z > 0;
+        const endConvex = out.x * dirs[(i + 1) % n]!.x + out.z * dirs[(i + 1) % n]!.z < 0;
+        const alongX = d.x !== 0;
+        let lo = alongX ? Math.min(from.x, to.x) : Math.min(from.z, to.z);
+        let hi = alongX ? Math.max(from.x, to.x) : Math.max(from.z, to.z);
+        if (alongX) {
+          const grow = (convex: boolean): number => (convex ? w : -w);
+          const [loConvex, hiConvex] = d.x > 0 ? [startConvex, endConvex] : [endConvex, startConvex];
+          lo -= grow(loConvex);
+          hi += grow(hiConvex);
+        }
+        const across = (alongX ? from.z : from.x) + (alongX ? out.z : out.x) * (w / 2);
+        const length = hi - lo;
+        b.box(alongX ? length : w, height, alongX ? w : length, PALETTE.escalatorSide, 'smooth', {
+          x: alongX ? (lo + hi) / 2 : across,
+          y: height / 2,
+          z: alongX ? across : (lo + hi) / 2,
+        });
+      }
     }
   }
 
@@ -354,11 +404,10 @@ export class DiceWorld {
 
   private buildPalms(b: PartBuilder): void {
     const spots: [number, number][] = [];
-    const A = AVENUE;
-    // Two tidy rows of palms along every avenue, clear of the walkways.
+    // Two tidy rows of palms along every avenue, between the loop's rings.
     for (const dir of AVENUE_DIRS) {
-      for (const r of [82, 108, 134]) {
-        for (const lateral of [-12, A.outboundOffset + 13]) spots.push([dir.ux * r + dir.lx * lateral, dir.uz * r + dir.lz * lateral]);
+      for (const r of [86, 106, 126]) {
+        for (const lateral of [-(AVENUE.pathHalf + 5), AVENUE.pathHalf + 5]) spots.push([dir.ux * r + dir.lx * lateral, dir.uz * r + dir.lz * lateral]);
       }
     }
     // The four corners of the terrace, and the four corners of the island beyond the plots.
@@ -394,8 +443,8 @@ export class DiceWorld {
   private buildLamps(b: PartBuilder): void {
     const spots: [number, number][] = [];
     for (const dir of AVENUE_DIRS) {
-      for (const r of [70, 95, 121]) {
-        for (const lateral of [-9, AVENUE.outboundOffset + 9]) spots.push([dir.ux * r + dir.lx * lateral, dir.uz * r + dir.lz * lateral]);
+      for (const r of [76, 96, 116]) {
+        for (const lateral of [-(AVENUE.pathHalf + 2), AVENUE.pathHalf + 2]) spots.push([dir.ux * r + dir.lx * lateral, dir.uz * r + dir.lz * lateral]);
       }
     }
     for (const [x, z] of spots) {
@@ -423,7 +472,7 @@ export class DiceWorld {
   dispose(): void {
     this.scoreboard.dispose();
     this.steps.dispose();
-    this.walkways.dispose();
+    this.loop.dispose();
     for (const sign of this.signs) sign.dispose();
     for (const item of this.disposables) item.dispose();
     this.root.removeFromParent();
