@@ -13,11 +13,12 @@ interface Candidate {
   readonly rarest: number;
   readonly rolls: number;
   readonly money: number;
+  readonly tower: number;
 }
 
 /**
- * The three boards north of the tower: Rarest (the best odds ever pulled),
- * Rolls and Money (Cash earned, ever).
+ * The four boards north of the tower: Rarest (the best odds ever pulled),
+ * Rolls, Money (Cash earned, ever) and Tower (the highest floor cleared).
  *
  * Every figure is the SERVER's, merged from stored profiles and live state,
  * the live figure winning wherever both exist. Rebuilt on a timer, not per tick.
@@ -46,6 +47,7 @@ export class LeaderboardService {
         rarest: row.bestOdds,
         rolls: row.totalRolls,
         money: row.lifetimeCash,
+        tower: row.towerBest,
       });
     }
 
@@ -60,6 +62,7 @@ export class LeaderboardService {
         rarest: player.bestOdds,
         rolls: player.totalRolls,
         money: player.lifetimeCash,
+        tower: player.towerBest,
       });
     }
 
@@ -67,6 +70,7 @@ export class LeaderboardService {
     fill(board.rarest, all, (c) => c.rarest);
     fill(board.rolls, all, (c) => c.rolls);
     fill(board.money, all, (c) => c.money);
+    fill(board.tower, all, (c) => c.tower);
   }
 }
 

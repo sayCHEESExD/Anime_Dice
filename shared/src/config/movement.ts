@@ -24,7 +24,7 @@ export interface MovementConfig {
 }
 
 export const MOVEMENT: MovementConfig = {
-  walkSpeed: 17,
+  walkSpeed: 20,
   jumpVelocity: 24,
   acceleration: 120,
   deceleration: 110,

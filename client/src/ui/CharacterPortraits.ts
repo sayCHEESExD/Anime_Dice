@@ -1,4 +1,4 @@
-import { STAND_POSES } from '../config/animationConfig.js';
+import { standPose } from '../config/animationConfig.js';
 import { characterById } from '@dice/shared';
 import {
   AmbientLight,
@@ -110,7 +110,7 @@ export class CharacterPortraits {
     const visual = new Group();
     visual.add(body.model);
     const rig = new PlayerRig(body.model, body.model);
-    this.pose.applyDefinition(STAND_POSES[character.role ?? 'balanced']);
+    this.pose.applyDefinition(standPose(character.role));
     rig.applyPose(this.pose);
     visual.rotation.y = -0.4;
     const scale = body.scale;

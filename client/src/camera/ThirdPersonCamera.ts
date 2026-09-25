@@ -198,6 +198,12 @@ export class ThirdPersonCamera {
       const t = this.obstruction(LOOK_TARGET.x, LOOK_TARGET.y, LOOK_TARGET.z, OFFSET.x, OFFSET.y, OFFSET.z);
       if (t < 1) this.camera.position.copy(LOOK_TARGET).addScaledVector(OFFSET, Math.max(0.08, t - 0.06));
     }
+    // ...and never under the floor, whatever the pitch.
+    if (this.floor) {
+      const p = this.camera.position;
+      const floor = this.floor(p.x, p.y + 1.5, p.z) + 0.6;
+      if (p.y < floor) p.y = floor;
+    }
 
     this.camera.lookAt(LOOK_TARGET);
   }
@@ -206,6 +212,13 @@ export class ThirdPersonCamera {
   setObstruction(test: (ox: number, oy: number, oz: number, dx: number, dy: number, dz: number) => number): void {
     this.obstruction = test;
   }
+
+  /** The floor height under a point (at or below the given height). */
+  setFloor(floor: (x: number, y: number, z: number) => number): void {
+    this.floor = floor;
+  }
+
+  private floor: ((x: number, y: number, z: number) => number) | null = null;
 
   private obstruction: ((ox: number, oy: number, oz: number, dx: number, dy: number, dz: number) => number) | null = null;
 }

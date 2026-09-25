@@ -26,10 +26,11 @@
     "size:client": "node scripts/build-size.mjs",
     "verify:data": "npm run build:shared && node scripts/verify-data.mjs",
     "verify:progression": "npm run build:server && node scripts/verify-progression.mjs",
-    "verify": "npm run verify:data && npm run verify:progression && npm run verify:assets",
+    "verify": "npm run verify:data && npm run verify:layout && npm run verify:progression && npm run verify:assets",
     "verify:capacity": "node scripts/verify-capacity.mjs",
     "verify:persistence": "npm run build:server && node scripts/verify-persistence.mjs",
-    "verify:multiplayer": "node scripts/verify-multiplayer.mjs"
+    "verify:multiplayer": "node scripts/verify-multiplayer.mjs",
+    "verify:layout": "npm run build:shared && node scripts/verify-layout.mjs"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",

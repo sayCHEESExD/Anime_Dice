@@ -212,8 +212,8 @@ try {
   check(r.battles.length === 0 && r.notices.some((n) => n.includes('Walk into the Tower')), 'fighting away from the tower is refused');
   const plot = r.state().plot;
   const spawn = S.plotSpawn(plot);
-  // Out of the plot, to the foot of the nearest terrace escalator, and up.
-  const esc = spawn.z > 0 ? { x: 0, z: 48, top: 20 } : { x: 0, z: -48, top: -20 };
+  // Out of the plot, across the plaza to the foot of the nearest terrace escalator, and up.
+  const esc = spawn.z > 0 ? { x: 0, z: 61, top: 28 } : { x: 0, z: -61, top: -28 };
   await walkTo(r, spawn.x * 0.5, esc.z, 10);
   await walkTo(r, esc.x, esc.z, 10);
   await walkTo(r, 0, esc.top, 8);

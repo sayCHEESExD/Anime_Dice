@@ -13,14 +13,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet" />
 
     <!--
-      The Bloxity SDK.
-      Loaded BEFORE the game bundle so `window.Legion` is there when `main.ts`
-      calls `init`. It is deliberately NOT `async`: the bundle is a module and
-      therefore deferred, and a plain script above it is guaranteed to have run
-      first. If the CDN is unreachable the game still boots - every call goes
-      through a guard that treats a missing SDK as "no portal".
+      The Bloxity SDK is NOT a blocking <script> here: a synchronous tag on a CDN
+      that stalls holds the whole page in "loading" and the game never boots.
+      `main.ts` injects it asynchronously and waits a few seconds at most
+      (`loadBloxitySdk`); a missing SDK means "no portal", and every call is
+      guarded for that.
     -->
-    <script src="https://sdk.bloxity.io/legion-sdk.min.js"></script>
     <style>
       :root {
         color-scheme: dark;

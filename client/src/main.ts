@@ -54,6 +54,37 @@ const paint = (): Promise<void> =>
     window.setTimeout(finish, 120);
   });
 
+/** Where the portal SDK is served from. */
+const SDK_URL = 'https://sdk.bloxity.io/legion-sdk.min.js';
+/** Longest the boot waits for the SDK before starting without a portal. */
+const SDK_TIMEOUT_MS = 5000;
+
+/**
+ * Load the Bloxity SDK without ever blocking the page: resolves when it has
+ * loaded, failed, or taken longer than SDK_TIMEOUT_MS - whichever is first.
+ */
+const loadBloxitySdk = (): Promise<void> =>
+  new Promise((resolve) => {
+    if ((window as Window & { Legion?: unknown }).Legion) {
+      resolve();
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = SDK_URL;
+    script.async = true;
+    const done = (): void => {
+      window.clearTimeout(timer);
+      resolve();
+    };
+    const timer = window.setTimeout(() => {
+      logger.warn(SCOPE, `Bloxity SDK did not load within ${SDK_TIMEOUT_MS} ms; starting without the portal`);
+      resolve();
+    }, SDK_TIMEOUT_MS);
+    script.addEventListener('load', done);
+    script.addEventListener('error', done);
+    document.head.append(script);
+  });
+
 const main = async (): Promise<void> => {
   const container = document.getElementById('app');
   if (!container) throw new Error('#app container missing from index.html');
@@ -75,6 +106,7 @@ const main = async (): Promise<void> => {
   const game = new Game(container);
   // Before anything loads: the portal draws the loading screen these steps
   // fill in, so it has to be listening before there is anything to report.
+  await loadBloxitySdk();
   game.startBloxity();
 
   setBootStatus('Loading characters…');

@@ -2,11 +2,9 @@ import {
   BackSide,
   BoxGeometry,
   Color,
-  ConeGeometry,
   Group,
   Mesh,
   MeshBasicMaterial,
-  MeshLambertMaterial,
   PlaneGeometry,
   ShaderMaterial,
   SphereGeometry,
@@ -14,28 +12,28 @@ import {
 } from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { WORLD_HALF } from '@dice/shared';
-import { PALETTE } from '../config/worldVisuals.js';
+import { PALETTE, WORLD_FOG } from '../config/worldVisuals.js';
 
 /** How far out the dome sits. Inside the camera's far plane. */
-const DOME_RADIUS = 1400;
+const DOME_RADIUS = 950;
 
 /**
- * The world around the island: a bright gradient dome, a ring of blocky
- * clouds, the OCEAN (one plane with a cheap animated shimmer) and a ring of
- * hazy blue mountains on the horizon, as in the reference. A handful of meshes
- * in total.
+ * The world around the island: a bright gradient dome that melts into the
+ * fog colour at the horizon, a ring of blocky clouds that fade into it with
+ * distance, and the OCEAN (one plane with a cheap animated shimmer) that
+ * thickens into the same fog. A handful of meshes, and no horizon line: the
+ * island's edge is where the fog takes over.
  */
 export class Sky {
   readonly root = new Group();
   private readonly dome: Mesh;
   private readonly oceanMaterial: ShaderMaterial;
-  private readonly disposables: (BufferGeometry | ShaderMaterial | MeshBasicMaterial | MeshLambertMaterial)[] = [];
+  private readonly disposables: (BufferGeometry | ShaderMaterial | MeshBasicMaterial)[] = [];
 
   constructor() {
     this.dome = this.buildDome();
     this.root.add(this.dome);
     this.oceanMaterial = this.buildOcean();
-    this.buildMountains();
     this.buildClouds(0x51a3, 46);
     this.root.renderOrder = -1;
   }
@@ -74,9 +72,10 @@ export class Sky {
         varying float vHeight;
         void main() {
           float h = clamp(vHeight, -1.0, 1.0);
-          vec3 sky = mix(midColor, topColor, clamp(h * 1.6, 0.0, 1.0));
-          vec3 low = mix(bottomColor, midColor, clamp((h + 0.05) * 6.0, 0.0, 1.0));
-          gl_FragColor = vec4(h > 0.05 ? sky : low, 1.0);
+          vec3 sky = mix(midColor, topColor, smoothstep(0.1, 0.7, h));
+          // A deep band of fog colour at the horizon, easing up into the sky.
+          float haze = 1.0 - smoothstep(-0.02, 0.28, h);
+          gl_FragColor = vec4(mix(sky, bottomColor, haze), 1.0);
         }
       `,
     });
@@ -96,8 +95,8 @@ export class Sky {
         shallow: { value: new Color(PALETTE.ocean) },
         deep: { value: new Color(PALETTE.oceanDeep) },
         fogColor: { value: new Color(PALETTE.fog) },
-        fogNear: { value: 220 },
-        fogFar: { value: 900 },
+        fogNear: { value: WORLD_FOG.near },
+        fogFar: { value: WORLD_FOG.far },
       },
       vertexShader: `
         varying vec3 vWorld;
@@ -126,7 +125,11 @@ export class Sky {
           float wave = sin(vWorld.x * 0.08 + time * 0.9) * sin(vWorld.z * 0.07 - time * 0.7);
           float glint = smoothstep(0.82, 1.0, wave);
           color += glint * 0.22;
-          float f = smoothstep(fogNear, fogFar, vDepth);
+          // Camera-distance fog like the rest of the world, AND fog by distance from
+          // the island: past the beach the sea dissolves into the horizon wherever
+          // the camera is, so the playable island reads as the whole world.
+          float edge = smoothstep(${(WORLD_HALF + 32).toFixed(1)}, ${(WORLD_HALF + 190).toFixed(1)}, d);
+          float f = max(smoothstep(fogNear, fogFar, vDepth), edge);
           gl_FragColor = vec4(mix(color, fogColor, f), 1.0);
         }
       `,
@@ -138,36 +141,6 @@ export class Sky {
     ocean.frustumCulled = false;
     this.root.add(ocean);
     return material;
-  }
-
-  /** A ring of low-poly blue peaks on the horizon, like the reference backdrop. */
-  private buildMountains(): void {
-    const random = seeded(0xa11);
-    const near: BufferGeometry[] = [];
-    const far: BufferGeometry[] = [];
-    for (let i = 0; i < 26; i += 1) {
-      const angle = (i / 26) * Math.PI * 2 + random() * 0.15;
-      const distance = 620 + random() * 160;
-      const height = 90 + random() * 170;
-      const radius = 80 + random() * 90;
-      const cone = new ConeGeometry(radius, height, 5 + Math.floor(random() * 3), 1);
-      cone.rotateY(random() * Math.PI);
-      cone.translate(Math.sin(angle) * distance, height / 2 - 8, Math.cos(angle) * distance);
-      (i % 2 === 0 ? near : far).push(cone);
-    }
-    for (const [parts, color] of [
-      [near, PALETTE.mountain],
-      [far, PALETTE.mountainDark],
-    ] as const) {
-      const merged = mergeGeometries(parts, false);
-      for (const part of parts) part.dispose();
-      if (!merged) continue;
-      const material = new MeshLambertMaterial({ color, flatShading: true, fog: true });
-      this.disposables.push(merged, material);
-      const mesh = new Mesh(merged, material);
-      mesh.frustumCulled = false;
-      this.root.add(mesh);
-    }
   }
 
   private buildClouds(seed: number, clusters: number): void {
@@ -207,7 +180,7 @@ export class Sky {
     const merged = mergeGeometries(parts, false);
     for (const part of parts) part.dispose();
     if (!merged) return;
-    const material = new MeshBasicMaterial({ color, fog: false });
+    const material = new MeshBasicMaterial({ color, fog: true });
     this.disposables.push(merged, material);
     const mesh = new Mesh(merged, material);
     mesh.frustumCulled = false;

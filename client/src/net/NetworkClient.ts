@@ -253,7 +253,7 @@ export class NetworkClient {
       }
       return out;
     };
-    return { rarest: copy(board.rarest), rolls: copy(board.rolls), money: copy(board.money) };
+    return { rarest: copy(board.rarest), rolls: copy(board.rolls), money: copy(board.money), tower: copy(board.tower ?? []) };
   }
 
   async disconnect(): Promise<void> {

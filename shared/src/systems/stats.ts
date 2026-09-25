@@ -33,9 +33,13 @@ export const baseIncome = (character: CharacterDef): number =>
 const baseStat = (character: CharacterDef): number =>
   Math.max(1, floor1(STAT_CURVE.statScale * Math.pow(character.odds, STAT_CURVE.statExponent) * (character.statMul ?? 1)));
 
-export const baseAttack = (character: CharacterDef): number => floor1(baseStat(character) * ROLES[character.role ?? 'balanced'].atk);
+/** A character's role multipliers. A missing or unknown role falls back to `balanced`. */
+export const roleOf = (character: CharacterDef): (typeof ROLES)[keyof typeof ROLES] =>
+  (character.role ? ROLES[character.role] : undefined) ?? ROLES.balanced;
 
-export const baseHealth = (character: CharacterDef): number => floor1(baseStat(character) * ROLES[character.role ?? 'balanced'].hp);
+export const baseAttack = (character: CharacterDef): number => floor1(baseStat(character) * roleOf(character).atk);
+
+export const baseHealth = (character: CharacterDef): number => floor1(baseStat(character) * roleOf(character).hp);
 
 // ----------------------------------------------------------------- unit
 

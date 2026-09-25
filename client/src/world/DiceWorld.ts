@@ -5,6 +5,10 @@ import {
   STALLS,
   TERRACE,
   TERRACE_ESCALATORS,
+  AVENUE,
+  AVENUE_DIRS,
+  PLOT,
+  WALKWAYS,
   TERRACE_STAIRS,
   TOWER,
   WORLD_HALF,
@@ -46,6 +50,8 @@ export class DiceWorld {
   readonly root = new Group();
   readonly scoreboard = new Scoreboard();
   readonly steps: EscalatorSteps;
+  /** The avenues' moving walkways: the same treads, scrolled at the walkway speed. */
+  readonly walkways: EscalatorSteps;
 
   private readonly disposables: (BufferGeometry | Material | Texture)[] = [];
   private readonly signs: CanvasSign[] = [];
@@ -64,11 +70,22 @@ export class DiceWorld {
     this.buildPalms(parts);
     this.buildLamps(parts);
     for (const e of TERRACE_ESCALATORS) buildEscalatorFrame(parts, e);
+    for (const e of WALKWAYS) {
+      buildEscalatorFrame(parts, e);
+      // The walkway deck under the moving treads.
+      parts.box(e.maxX - e.minX, AVENUE.top, e.maxZ - e.minZ, 0x3a4058, 'smooth', {
+        x: (e.minX + e.maxX) / 2,
+        y: AVENUE.top / 2,
+        z: (e.minZ + e.maxZ) / 2,
+      });
+    }
     const merged = parts.build('hub-parts');
     this.root.add(merged);
 
     this.steps = new EscalatorSteps([...TERRACE_ESCALATORS, ...PLOTS.map(plotEscalator)]);
     this.root.add(this.steps.mesh);
+    this.walkways = new EscalatorSteps(WALKWAYS);
+    this.root.add(this.walkways.mesh);
 
     this.portalTexture = worldTextures.portal('#7a3cff', '#3ad8ff').clone();
     this.portalTexture.needsUpdate = true;
@@ -82,6 +99,7 @@ export class DiceWorld {
   update(delta: number): void {
     this.time += delta;
     this.steps.update(delta, ESCALATOR_SPEED);
+    this.walkways.update(delta, AVENUE.speed);
     this.portalTexture.offset.y = (this.time * 0.35) % 1;
     this.dice.rotation.y += delta * 0.35;
     this.dice.rotation.x = Math.sin(this.time * 0.5) * 0.25 + 0.6;
@@ -106,10 +124,41 @@ export class DiceWorld {
 
     // The tiled plaza: from the terrace out to the plots.
     const tiles = worldTextures.tiles(PALETTE.plaza, PALETTE.plazaLine, PALETTE.plazaAccent);
-    const plaza = new Mesh(this.geometry(texturedBox(172, 0.1, 172, 4)), this.lambert(tiles));
+    const span = (PLOT.inner - 3) * 2;
+    const plaza = new Mesh(this.geometry(texturedBox(span, 0.1, span, 4)), this.lambert(tiles));
     plaza.position.y = 0.03;
     plaza.receiveShadow = true;
     this.root.add(plaza);
+
+    // The avenues: a pale-blue tiled path out to each plot row, under its walkways,
+    // and a ring path round the foot of the terrace joining them.
+    const pathTiles = this.lambert(worldTextures.tiles('#dfeafc', '#aebfe6', '#ffffff'));
+    const A = AVENUE;
+    const pathLength = PLOT.inner - TERRACE.half;
+    const pathMid = (PLOT.inner + TERRACE.half) / 2;
+    const lateralMid = A.outboundOffset / 2;
+    const pathWidth = A.pathHalf * 2;
+    for (const dir of AVENUE_DIRS) {
+      const alongZ = dir.uz !== 0;
+      const w = alongZ ? pathWidth : pathLength;
+      const d = alongZ ? pathLength : pathWidth;
+      const path = new Mesh(this.geometry(texturedBox(w, 0.08, d, 4)), pathTiles);
+      path.position.set(dir.ux * pathMid + dir.lx * lateralMid, 0.1, dir.uz * pathMid + dir.lz * lateralMid);
+      path.receiveShadow = true;
+      this.root.add(path);
+    }
+    const ring = TERRACE.half + 14;
+    for (const [w, d, x, z] of [
+      [ring * 2, 12, 0, ring - 6],
+      [ring * 2, 12, 0, -(ring - 6)],
+      [12, ring * 2 - 24, ring - 6, 0],
+      [12, ring * 2 - 24, -(ring - 6), 0],
+    ] as const) {
+      const band = new Mesh(this.geometry(texturedBox(w, 0.06, d, 4)), pathTiles);
+      band.position.set(x, 0.09, z);
+      band.receiveShadow = true;
+      this.root.add(band);
+    }
   }
 
   // --------------------------------------------------------------- terrace
@@ -305,40 +354,50 @@ export class DiceWorld {
 
   private buildPalms(b: PartBuilder): void {
     const spots: [number, number][] = [];
-    // Plaza corners and the gaps between the plot rows.
-    for (const sx of [-1, 1]) {
-      for (const sz of [-1, 1]) {
-        spots.push([sx * 74, sz * 74], [sx * 62, sz * 80], [sx * 80, sz * 60], [sx * 110, sz * 110], [sx * 126, sz * 100], [sx * 100, sz * 128]);
+    const A = AVENUE;
+    // Two tidy rows of palms along every avenue, clear of the walkways.
+    for (const dir of AVENUE_DIRS) {
+      for (const r of [82, 108, 134]) {
+        for (const lateral of [-12, A.outboundOffset + 13]) spots.push([dir.ux * r + dir.lx * lateral, dir.uz * r + dir.lz * lateral]);
       }
     }
-    spots.push([-48, 40], [48, -40], [-48, -40], [48, 40], [-62, -16], [-62, 16], [62, -16], [62, 16]);
-    for (const [x, z] of spots) {
-      const height = 9 + ((x * 13 + z * 7) & 7) * 0.5;
-      const lean = ((x + z) % 3) * 0.08;
-      for (let i = 0; i < 5; i += 1) {
-        b.add(new CylinderGeometry(0.55 - i * 0.05, 0.62 - i * 0.05, height / 5, 7), i % 2 === 0 ? PALETTE.trunk : 0x7f5530, 'smooth', {
-          x: x + lean * i,
-          y: (height / 5) * (i + 0.5),
-          z,
-        });
-      }
-      for (let i = 0; i < 6; i += 1) {
-        const a = (i / 6) * Math.PI * 2;
-        b.box(1.4, 0.3, 5.5, i % 2 === 0 ? PALETTE.palm : PALETTE.palmDark, 'smooth', {
-          x: x + lean * 5 + Math.sin(a) * 2.4,
-          y: height + 0.3,
-          z: z + Math.cos(a) * 2.4,
-          ry: a,
-          rx: 0.35,
-        });
-      }
-      b.add(new SphereGeometry(0.9, 8, 6), PALETTE.palmDark, 'smooth', { x: x + lean * 5, y: height + 0.4, z });
-    }
+    // The four corners of the terrace, and the four corners of the island beyond the plots.
+    const T = TERRACE.half + 7;
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) spots.push([sx * T, sz * T], [sx * 190, sz * 190], [sx * 205, sz * 150], [sx * 150, sz * 205]);
+    for (const [x, z] of spots) this.palm(b, x, z);
   }
 
+  private palm(b: PartBuilder, x: number, z: number): void {
+    const height = 9 + ((Math.abs(Math.round(x * 13 + z * 7))) % 8) * 0.5;
+    const lean = (Math.abs(Math.round(x + z)) % 3) * 0.08;
+    for (let i = 0; i < 5; i += 1) {
+      b.add(new CylinderGeometry(0.55 - i * 0.05, 0.62 - i * 0.05, height / 5, 7), i % 2 === 0 ? PALETTE.trunk : 0x7f5530, 'smooth', {
+        x: x + lean * i,
+        y: (height / 5) * (i + 0.5),
+        z,
+      });
+    }
+    for (let i = 0; i < 6; i += 1) {
+      const a = (i / 6) * Math.PI * 2;
+      b.box(1.4, 0.3, 5.5, i % 2 === 0 ? PALETTE.palm : PALETTE.palmDark, 'smooth', {
+        x: x + lean * 5 + Math.sin(a) * 2.4,
+        y: height + 0.3,
+        z: z + Math.cos(a) * 2.4,
+        ry: a,
+        rx: 0.35,
+      });
+    }
+    b.add(new SphereGeometry(0.9, 8, 6), PALETTE.palmDark, 'smooth', { x: x + lean * 5, y: height + 0.4, z });
+  }
+
+  /** Lamps line the avenues, so the way to the tower reads from anywhere. */
   private buildLamps(b: PartBuilder): void {
     const spots: [number, number][] = [];
-    for (const v of [-50, -20, 20, 50]) spots.push([v, 44], [v, -44], [44, v], [-44, v]);
+    for (const dir of AVENUE_DIRS) {
+      for (const r of [70, 95, 121]) {
+        for (const lateral of [-9, AVENUE.outboundOffset + 9]) spots.push([dir.ux * r + dir.lx * lateral, dir.uz * r + dir.lz * lateral]);
+      }
+    }
     for (const [x, z] of spots) {
       b.add(new CylinderGeometry(0.3, 0.4, 7, 8), 0x2c3a66, 'smooth', { x, y: 3.5, z });
       b.add(new SphereGeometry(0.9, 10, 8), 0xfff2c0, 'glow', { x, y: 7.4, z });
@@ -364,6 +423,7 @@ export class DiceWorld {
   dispose(): void {
     this.scoreboard.dispose();
     this.steps.dispose();
+    this.walkways.dispose();
     for (const sign of this.signs) sign.dispose();
     for (const item of this.disposables) item.dispose();
     this.root.removeFromParent();

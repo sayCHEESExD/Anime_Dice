@@ -1,10 +1,10 @@
-import { COMBAT, ROLES } from '../config/progression.js';
+import { COMBAT } from '../config/progression.js';
 import { TOWER_CURVE, floorDef } from '../config/tower.js';
 import { characterById } from '../data/characters.js';
 import type { AbilityDef } from '../data/characterTypes.js';
 import type { UnitRecord } from '../types/units.js';
 import type { Random } from './rng.js';
-import { baseAttack, baseHealth, critChance, damageMultiplier, healthMultiplier, unitAttack, unitHealth, type UpgradeLevels } from './stats.js';
+import { baseAttack, baseHealth, critChance, damageMultiplier, healthMultiplier, roleOf, unitAttack, unitHealth, type UpgradeLevels } from './stats.js';
 
 /**
  * CARD BATTLES, resolved in full.
@@ -126,7 +126,7 @@ export const floorFighters = (floor: number): FighterInit[] => {
   for (const enemy of def.enemies) {
     const character = characterById(enemy.charId);
     if (!character) continue;
-    const role = ROLES[character.role ?? 'balanced'];
+    const role = roleOf(character);
     const init: FighterInit = {
       charId: enemy.charId,
       atk: round2(def.strength * fewer * role.atk * (enemy.boss ? TOWER_CURVE.bossAtk : 1)),

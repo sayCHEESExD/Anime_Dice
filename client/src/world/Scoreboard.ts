@@ -23,7 +23,7 @@ import { maxTextureEdge } from '../config/device.js';
 
 const SCOPE = 'Scoreboard';
 
-type Category = 'rarest' | 'rolls' | 'money';
+type Category = 'rarest' | 'rolls' | 'money' | 'tower';
 
 interface BoardSpec {
   readonly category: Category;
@@ -33,11 +33,12 @@ interface BoardSpec {
   readonly titleStroke: string;
 }
 
-/** The three boards north of the tower, as in the reference: Rarest, Rolls and Money. */
+/** The four boards north of the tower: Rarest, Rolls and Money as in the reference, plus Top Tower. */
 const SPECS: Readonly<Record<Category, BoardSpec>> = {
   rarest: { category: 'rarest', title: '? Rarest ?', heading: 'RAREST PULL', titleFill: '#9fd4ff', titleStroke: '#10204a' },
   rolls: { category: 'rolls', title: 'Rolls', heading: 'MOST ROLLS', titleFill: '#ffffff', titleStroke: '#10204a' },
   money: { category: 'money', title: '$ Money $', heading: 'MOST MONEY', titleFill: '#8dff7a', titleStroke: '#0f3a12' },
+  tower: { category: 'tower', title: 'Top Tower', heading: 'HIGHEST FLOOR', titleFill: '#ffd23a', titleStroke: '#3a2a00' },
 };
 
 const FRAME = 1.1;
@@ -54,7 +55,7 @@ const PANEL_H = BOARD_SIZE.height - 9;
 const PANEL_BASE = 3;
 
 /**
- * The three leaderboards north of the tower, facing it: navy panels between
+ * The four leaderboards north of the tower, facing it: navy panels between
  * two faceted stone pillars, with a banner title on top - each a canvas
  * redrawn only when the standings change.
  */
@@ -298,6 +299,7 @@ class PanelSurface {
 
   private format(value: number): string {
     if (this.category === 'rarest') return formatOdds(value);
+    if (this.category === 'tower') return `Floor ${Math.floor(value)}`;
     if (this.category === 'money') return `$${formatAmount(value)}`;
     return formatAmount(value);
   }

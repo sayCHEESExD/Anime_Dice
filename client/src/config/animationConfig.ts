@@ -160,6 +160,9 @@ export const STAND_POSES: Readonly<Record<RoleId, PoseDefinition>> = {
   },
 };
 
+/** The stand pose for a role. A missing or unknown role falls back to `balanced`. */
+export const standPose = (role: RoleId | undefined): PoseDefinition => (role ? STAND_POSES[role] : undefined) ?? STAND_POSES.balanced;
+
 /** The stand idle on top of the pose. */
 export const STAND_IDLE = {
   breathFrequency: 0.45,

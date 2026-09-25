@@ -12,11 +12,12 @@ export class LeaderEntry extends Schema {
   @type('float64') value = 0;
 }
 
-/** The three boards north of the tower. Fixed-length, written in place. */
+/** The four boards north of the tower. Fixed-length, written in place. */
 export class LeaderboardState extends Schema {
   @type([LeaderEntry]) rarest = rows();
   @type([LeaderEntry]) rolls = rows();
   @type([LeaderEntry]) money = rows();
+  @type([LeaderEntry]) tower = rows();
 }
 
 const rows = (): ArraySchema<LeaderEntry> => {

@@ -22,18 +22,18 @@ import { DISPLAY_SLOTS } from './display.js';
 
 // ------------------------------------------------------------------ world
 
-export const WORLD_HALF = 150;
+export const WORLD_HALF = 225;
 export const KILL_Y = -40;
 
-export const TERRACE = { half: 30, top: 5 } as const;
+export const TERRACE = { half: 40, top: 5 } as const;
 
 export const TOWER = {
-  radius: 13,
-  height: 118,
+  radius: 16,
+  height: 150,
   /** Door zones (in front of each door, on the terrace). */
   doors: [
-    { x: 0, z: 16, facing: 0 },
-    { x: 0, z: -16, facing: Math.PI },
+    { x: 0, z: 20, facing: 0 },
+    { x: 0, z: -20, facing: Math.PI },
   ],
   doorHalfWidth: 5,
   doorDepth: 5,
@@ -64,12 +64,12 @@ export const ESCALATOR_SPEED = 9;
 export const ESCALATOR_RAIL = 1.3;
 
 export const TERRACE_ESCALATORS: readonly EscalatorDef[] = [
-  { minX: -4, maxX: 4, minZ: 30, maxZ: 43, axis: 'z', low: 43, high: 30, y0: 0, y1: TERRACE.top, speed: ESCALATOR_SPEED },
-  { minX: -4, maxX: 4, minZ: -43, maxZ: -30, axis: 'z', low: -43, high: -30, y0: 0, y1: TERRACE.top, speed: ESCALATOR_SPEED },
+  { minX: -5, maxX: 5, minZ: 40, maxZ: 56, axis: 'z', low: 56, high: 40, y0: 0, y1: TERRACE.top, speed: ESCALATOR_SPEED },
+  { minX: -5, maxX: 5, minZ: -56, maxZ: -40, axis: 'z', low: -56, high: -40, y0: 0, y1: TERRACE.top, speed: ESCALATOR_SPEED },
 ];
 
 /** The east and west terrace stairs: four treads each, 1 unit rise, 2.5 deep. */
-export const TERRACE_STAIRS = { halfWidth: 8, treads: 4, rise: 1, depth: 2.5 } as const;
+export const TERRACE_STAIRS = { halfWidth: 10, treads: 4, rise: 1, depth: 2.5 } as const;
 
 // ------------------------------------------------------------------ plots
 
@@ -81,9 +81,9 @@ export const PLOT = {
   /** Top of the plot's floor slab (one step up from the grass). */
   floorTop: 1,
   /** Distance from the centre to a plot's front edge. */
-  inner: 90,
+  inner: 150,
   /** Centre-to-centre spacing along a side. */
-  spacing: 45,
+  spacing: 64,
   /** Stand pedestals: size and height above the floor. */
   standSize: 5,
   standHeight: 1.4,
@@ -264,23 +264,91 @@ export interface StallDef {
 }
 
 export const STALLS: readonly StallDef[] = [
-  { id: 'upgrades', name: 'UPGRADES', x: -30, z: -62, yaw: 0, width: 14, depth: 8 },
-  { id: 'sell', name: 'SELL UNITS', x: 30, z: -62, yaw: 0, width: 14, depth: 8 },
+  { id: 'upgrades', name: 'UPGRADES', x: -40, z: -96, yaw: 0, width: 16, depth: 9 },
+  { id: 'sell', name: 'SELL UNITS', x: 40, z: -96, yaw: 0, width: 16, depth: 9 },
 ];
 
 /** How close to the front of a stall its window opens. */
-export const STALL_REACH = { front: 6, halfWidth: 7 } as const;
+export const STALL_REACH = { front: 6, halfWidth: 8 } as const;
 
 export const BOARDS = [
-  { id: 'rarest', title: 'Rarest', x: -30, z: 66, yaw: Math.PI },
-  { id: 'rolls', title: 'Rolls', x: 0, z: 70, yaw: Math.PI },
-  { id: 'money', title: 'Money', x: 30, z: 66, yaw: Math.PI },
+  { id: 'rarest', title: 'Rarest', x: -74, z: 100, yaw: Math.PI },
+  { id: 'rolls', title: 'Rolls', x: -42, z: 104, yaw: Math.PI },
+  { id: 'money', title: 'Money', x: 42, z: 104, yaw: Math.PI },
+  { id: 'tower', title: 'Tower', x: 74, z: 100, yaw: Math.PI },
 ] as const;
 
 export const BOARD_SIZE = { width: 20, height: 26, depth: 1.6 } as const;
 
-export const DICE_MONUMENT = { x: 62, z: 0, size: 12, pool: 14 } as const;
-export const FOUNTAIN = { x: -62, z: 0, radius: 12 } as const;
+export const DICE_MONUMENT = { x: 94, z: 44, size: 12, pool: 14 } as const;
+export const FOUNTAIN = { x: -94, z: -44, radius: 12 } as const;
+
+// -------------------------------------------------------------- avenues
+
+/**
+ * THE FOUR AVENUES: from the terrace out between the plot rows, each a tiled
+ * path carrying a pair of MOVING WALKWAYS (flat escalators): the lane on the
+ * avenue's centre line carries players IN toward the tower, the lane beside
+ * it carries them OUT toward the plots. Same ramp + conveyor as the
+ * escalators, so the simulation needs nothing new.
+ */
+export const AVENUE = {
+  /** Walkways run from this distance from the centre... */
+  from: 66,
+  /** ...to this one (just inside the plot ring). */
+  to: 142,
+  laneHalf: 3.5,
+  /** Centre of the outbound lane, sideways from the inbound one. */
+  outboundOffset: 11,
+  /** Height of the walkway deck above the plaza. */
+  top: 0.3,
+  speed: 13,
+  /** Half-width of the tiled path under the walkways. */
+  pathHalf: 18,
+} as const;
+
+export interface AvenueDir {
+  /** Outward unit vector. */
+  readonly ux: number;
+  readonly uz: number;
+  /** Sideways unit vector: the outbound lane lies this way. */
+  readonly lx: number;
+  readonly lz: number;
+}
+
+export const AVENUE_DIRS: readonly AvenueDir[] = [
+  { ux: 0, uz: 1, lx: 1, lz: 0 },
+  { ux: 1, uz: 0, lx: 0, lz: -1 },
+  { ux: 0, uz: -1, lx: -1, lz: 0 },
+  { ux: -1, uz: 0, lx: 0, lz: 1 },
+];
+
+/** One lane as a flat escalator: centred `lateral` units to the side, carried inward or outward. */
+const lane = (dir: AvenueDir, lateral: number, inbound: boolean): EscalatorDef => {
+  const A = AVENUE;
+  const alongZ = dir.uz !== 0;
+  const sign = alongZ ? dir.uz : dir.ux;
+  const nearEnd = sign * A.from;
+  const farEnd = sign * A.to;
+  const side = alongZ ? dir.lx * lateral : dir.lz * lateral;
+  const along = [Math.min(nearEnd, farEnd), Math.max(nearEnd, farEnd)] as const;
+  const across = [side - A.laneHalf, side + A.laneHalf] as const;
+  return {
+    minX: alongZ ? across[0] : along[0],
+    maxX: alongZ ? across[1] : along[1],
+    minZ: alongZ ? along[0] : across[0],
+    maxZ: alongZ ? along[1] : across[1],
+    axis: alongZ ? 'z' : 'x',
+    low: inbound ? farEnd : nearEnd,
+    high: inbound ? nearEnd : farEnd,
+    y0: A.top,
+    y1: A.top,
+    speed: A.speed,
+  };
+};
+
+/** Every moving walkway: an inbound and an outbound lane per avenue. */
+export const WALKWAYS: readonly EscalatorDef[] = AVENUE_DIRS.flatMap((dir) => [lane(dir, 0, true), lane(dir, AVENUE.outboundOffset, false)]);
 
 // ---------------------------------------------------------------- solids
 
@@ -318,8 +386,9 @@ export const buildStaticSolids = (): Aabb[] => {
   solids.push(box(-R, R, TERRACE.top, TERRACE.top + TOWER.height, -r, r));
   solids.push(box(-r, r, TERRACE.top, TERRACE.top + TOWER.height, -R, R));
 
-  // Terrace escalators: side panels.
+  // Terrace escalators and avenue walkways: side panels.
   for (const e of TERRACE_ESCALATORS) solids.push(...escalatorSides(e));
+  for (const e of WALKWAYS) solids.push(...escalatorSides(e));
 
   // Stalls: the counter building behind the front zone.
   for (const stall of STALLS) {
@@ -401,7 +470,7 @@ export const plotSolids = (plot: PlotPlacement): Aabb[] => {
 };
 
 /** Every ramp (escalator) in the world. */
-export const buildRamps = (): EscalatorDef[] => [...TERRACE_ESCALATORS, ...PLOTS.map(plotEscalator)];
+export const buildRamps = (): EscalatorDef[] => [...TERRACE_ESCALATORS, ...WALKWAYS, ...PLOTS.map(plotEscalator)];
 
 export const worldBounds = (): Aabb => box(-WORLD_HALF, WORLD_HALF, -100, 400, -WORLD_HALF, WORLD_HALF);
 

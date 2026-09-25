@@ -2,7 +2,6 @@ import {
   CHARACTERS,
   DISPLAY_SLOTS,
   POTIONS,
-  ROLES,
   UNIT_LEVEL,
   characterById,
   cssColor,
@@ -18,6 +17,7 @@ import {
   potionById,
   potionRoom,
   rarityById,
+  roleOf,
   sellValue,
   unitAttack,
   unitHealth,
@@ -275,7 +275,7 @@ export class BackpackWindow extends GameWindow {
       `<div class="dice-stat"><span>Level</span>${unit.l}/${UNIT_LEVEL.max}</div>` +
       `<div class="dice-stat"><span>Attack</span>&#9876; ${formatStat(unitAttack(unit))}</div>` +
       `<div class="dice-stat"><span>Health</span>&#10084; ${formatStat(unitHealth(unit))}</div>` +
-      `<div class="dice-stat"><span>Role</span>${ROLES[character.role ?? 'balanced'].name}</div>` +
+      `<div class="dice-stat"><span>Role</span>${roleOf(character).name}</div>` +
       `<div class="dice-stat"><span>Your odds</span>${formatOdds(luckOdds)}</div>` +
       `</div>` +
       (character.ability ? `<div class="dice-detail__ability">&#10022; ${character.ability.name}: ${abilityText(character.ability.kind, character.ability.every, character.ability.power)}</div>` : '') +

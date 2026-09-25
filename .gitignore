@@ -6,6 +6,6 @@ dist/
 # Player profiles. Written beside the server by `npm start`, and at the repo
 # root by anyone who runs `node server/dist/index.js` from here.
 server/data/
-data/
+/data/
 # The client bundle the deploy workflow packages for the Bloxity Hosting upload.
 client-dist.zip

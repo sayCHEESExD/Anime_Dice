@@ -60,6 +60,7 @@ export interface NetLeaderboardState {
   rarest: ArrayLike<NetLeaderEntry>;
   rolls: ArrayLike<NetLeaderEntry>;
   money: ArrayLike<NetLeaderEntry>;
+  tower: ArrayLike<NetLeaderEntry>;
 }
 
 export interface NetGameState {
@@ -73,6 +74,7 @@ export interface LeaderboardSnapshot {
   rarest: readonly NetLeaderEntry[];
   rolls: readonly NetLeaderEntry[];
   money: readonly NetLeaderEntry[];
+  tower: readonly NetLeaderEntry[];
 }
 
 export type ConnectionStatus = 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'disconnected' | 'error';

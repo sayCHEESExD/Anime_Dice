@@ -233,6 +233,7 @@ export class Game {
     window.addEventListener('pointerdown', () => this.hud.closePopover());
     this.renderer.onResize((width, height) => this.camera.setViewport(width, height));
     this.camera.setObstruction((ox, oy, oz, dx, dy, dz) => this.collision.raycast(ox, oy, oz, dx, dy, dz));
+    this.camera.setFloor((x, y, z) => this.collision.floorBelow(x, y, z, 0));
 
     this.network.setTokenProvider(() => this.bloxity.getToken());
     this.network.setLookProvider(() => lookFromLegion(this.bloxity.getEquipped(), this.bloxity.getProportions()));

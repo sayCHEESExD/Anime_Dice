@@ -49,7 +49,7 @@ export const CAMERA: CameraConfig = {
   followLerp: 10,
   fov: 62,
   near: 0.1,
-  far: 2400,
+  far: 1100,
   speedDistance: 4.5,
   speedFov: 14,
   speedReference: 30,

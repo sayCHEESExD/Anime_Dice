@@ -71,15 +71,22 @@ export const PALETTE = {
   /** Sky and fog. */
   skyTop: 0x3d9cf0,
   sky: 0x8fd3ff,
-  fog: 0xc8ecff,
+  fog: 0xcfeafb,
   skyCloud: 0xffffff,
   skyCloudShade: 0xdcecfb,
 } as const;
 
-/** Fog band. */
+/**
+ * THE HORIZON FOG, by distance from the camera. Everything on the island a
+ * player looks at (their plot, the plaza, the tower) sits well inside `near`
+ * and stays crisp; the far plots haze a little; the sea past the beach thickens
+ * to the fog colour by `far`, so the world ends in a soft horizon instead of
+ * scenery running on for ever. The sky dome and the ocean blend to the same
+ * colour, so there is no seam.
+ */
 export const WORLD_FOG = {
-  near: 220,
-  far: 720,
+  near: 170,
+  far: 470,
 } as const;
 
 /** Yaw correction for the supplied player FBX. It already faces +Z. */

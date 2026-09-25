@@ -8,7 +8,7 @@ A browser multiplayer anime character collection and idle-income game. Players r
 npm run dev                 # builds shared, then server (tsx watch, :2620) + Vite client (:5220)
 npm run build               # shared + server + client (client/dist)
 npm run typecheck           # all workspaces
-npm run verify              # verify:data + verify:progression + verify:assets (no server needed)
+npm run verify              # verify:data + verify:layout + verify:progression + verify:assets (no server needed)
 node scripts/verify-multiplayer.mjs   # needs `npm run build:server`; spawns its own server on :2699
 npm run verify:persistence  # identity/storage/migration/grants, JSON and Mongo (if mongod is found)
 npm run verify:capacity     # needs a running server on :2620
@@ -31,10 +31,13 @@ Do NOT use python from the Bash tool on this machine; use node/sed/perl. Write m
 
 ## Layout facts (`shared/src/config/map.ts`)
 
-- The central tower (r 13, 118 tall) stands on a terrace [-30,30]² with its top at y 5. Escalators (RAMP plus conveyor in `PlayerSim`) climb it from the north (z 43→30) and south, and stairs from the east and west. The tower doors at z ±16 open the Tower window. A fight is allowed anywhere on the terrace (`onTowerTerrace`).
-- There are 16 plots, 4 per side, with the front edge 90 from the centre and local +Z into the plot (`plotToWorld`). Each is 40×46: a floor slab (top y 1), a red carpet, 10 ground stands (x ±13, z 8..40) and 10 on the upper galleries (deck top y 10). Slot order: ground +x column (free), ground −x (rebirths 1-5), upper +x, upper −x. The plot's own escalator runs up the carpet (z 21→40) to the back bridge. Level pads sit on the carpet side of each stand (`padAt`). The owner's banner hangs under the entrance arch.
-- Plaza: UPGRADES and SELL UNITS stalls at z −62 (front zones open their windows), the Rarest, Rolls and Money boards at z 66-70 facing the tower, the dice monument east, and the fountain west.
-- `client/src/world/PlotView.ts` builds characters, labels and VFX only for plots near the camera (at most 3 character builds per frame). Only near stands animate.
+- The island is ±225 (`WORLD_HALF`) of grass inside a sand beach, in open sea. The central tower (r 16, 150 tall) stands on a terrace [-40,40]² with its top at y 5. Escalators (ramp plus conveyor in `PlayerSim`) climb it from the north (z 56→40) and south; stairs climb it from the east and west. Tower doors at z ±20 open the Tower window. A fight is allowed anywhere on the terrace (`onTowerTerrace`).
+- **Four avenues** (`AVENUE`, `AVENUE_DIRS`, `WALKWAYS`) run from the terrace out between the plot rows. Each is a pale tiled path carrying two moving walkways (flat escalators, deck at y 0.3, speed 13): the lane on the centre line carries players IN, and the lane 11 units to its side carries them OUT (r 66↔142). The 10-unit gap between the inner walkway ends and the escalator foot is the crossing zone. `npm run verify:layout` checks that no lane clashes with a building, that every spawn is clear, that every plot reaches the terrace with the real sim, and that riding beats walking.
+- 16 plots, 4 per side, 64 apart, front edge 150 from the centre, local +Z into the plot (`plotToWorld`). Each is 40×46: a floor slab (top y 1), a red carpet, 10 ground stands (x ±13, z 8..40) and 10 on the upper galleries (deck top y 10). Slot order: ground +x column (free), ground −x (rebirths 1-5), upper +x, upper −x. The plot's own escalator runs up the carpet to the back bridge. Level pads sit on the carpet side of each stand (`padAt`).
+- Plaza points of interest, each beside an avenue and never on one: UPGRADES and SELL UNITS stalls at (±40, −96); the Rarest, Rolls, Money and Top Tower boards at x −74/−42/42/74 (z 100-104) facing the tower; the dice monument at (94, 44); the fountain at (−94, −44). Palms and lamps only line the avenues and mark the terrace and island corners.
+- **Horizon fog**: scene `Fog` 170→470 by camera distance (`WORLD_FOG` in `client/src/config/worldVisuals.ts`). The ocean shader also fogs by distance from the island (`WORLD_HALF`+32 → +190), so the sea dissolves past the beach from anywhere. The sky dome fades to the fog colour at the horizon, and clouds fog too. There are no mountains. Camera far is 1100.
+- `client/src/world/PlotView.ts` builds characters, labels and VFX only for plots near the camera (at most 3 builds per frame); only near stands animate. The camera ray-tests the collision boxes (`WorldCollision.raycast`) and never goes below the floor.
+- The Bloxity SDK is injected asynchronously by `main.ts` with a 5-second cap. A blocking `<script>` tag on a stalled CDN once froze the page in "loading".
 
 ## Look
 

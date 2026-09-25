@@ -170,6 +170,7 @@ class ProfileStore {
       lifetimeCash: profile.lifetimeCash ?? 0,
       totalRolls: profile.totalRolls ?? 0,
       bestOdds: profile.bestOdds ?? 0,
+      towerBest: profile.towerBest ?? 0,
       updatedAt: profile.updatedAt ?? 0,
     };
     if (typeof profile.migratedTo === 'string') row.migratedTo = profile.migratedTo;

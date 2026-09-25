@@ -77,11 +77,12 @@ export interface BoardRow {
   lifetimeCash: number;
   totalRolls: number;
   bestOdds: number;
+  towerBest: number;
   updatedAt: number;
   migratedTo?: string;
 }
 
-export const BOARD_FIELDS = ['displayName', 'avatarUrl', 'lifetimeCash', 'totalRolls', 'bestOdds', 'updatedAt', 'migratedTo'] as const;
+export const BOARD_FIELDS = ['displayName', 'avatarUrl', 'lifetimeCash', 'totalRolls', 'bestOdds', 'towerBest', 'updatedAt', 'migratedTo'] as const;
 
 const NUMERIC_KEYS = [
   'cash',
@@ -240,6 +241,7 @@ export const coerceBoardRow = (raw: unknown): BoardRow | null => {
     lifetimeCash: numeric(source['lifetimeCash']),
     totalRolls: numeric(source['totalRolls']),
     bestOdds: numeric(source['bestOdds']),
+    towerBest: numeric(source['towerBest']),
     updatedAt: numeric(source['updatedAt']),
   };
   if (typeof source['migratedTo'] === 'string') row.migratedTo = source['migratedTo'];

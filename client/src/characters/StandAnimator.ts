@@ -1,7 +1,7 @@
 import type { RoleId } from '@dice/shared';
 import { PoseBuffer } from '../animation/PoseBuffer.js';
 import type { PlayerRig } from '../animation/rig/PlayerRig.js';
-import { STAND_IDLE, STAND_POSES } from '../config/animationConfig.js';
+import { STAND_IDLE, standPose } from '../config/animationConfig.js';
 
 /**
  * THE TROPHY IDLE: a character on a stand holds its role's pose and breathes,
@@ -23,7 +23,7 @@ export class StandAnimator {
 
   /** Apply the still pose (no breathing): for stands too far to animate. */
   hold(): void {
-    this.pose.applyDefinition(STAND_POSES[this.role]);
+    this.pose.applyDefinition(standPose(this.role));
     this.rig.applyPose(this.pose);
   }
 
@@ -33,7 +33,7 @@ export class StandAnimator {
     const breath = Math.sin(this.time * STAND_IDLE.breathFrequency * Math.PI * 2);
     const look = Math.sin(this.time * STAND_IDLE.headLookFrequency * Math.PI * 2);
     const sway = Math.sin(this.time * STAND_IDLE.breathFrequency * Math.PI * 2 + 1.3);
-    this.pose.applyDefinition(STAND_POSES[this.role]);
+    this.pose.applyDefinition(standPose(this.role));
     this.pose.add('Spine1', breath * STAND_IDLE.breathAmount);
     this.pose.add('Spine2', breath * STAND_IDLE.breathAmount * 0.5);
     this.pose.add('Neck1', -breath * STAND_IDLE.breathAmount * 0.5, look * STAND_IDLE.headLook);
