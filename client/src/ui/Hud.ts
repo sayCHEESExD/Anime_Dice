@@ -95,7 +95,7 @@ export class Hud {
     this.backpackBadge = el('div', 'dice-badge dice-out', '!');
     this.backpackBadge.hidden = true;
     backpack.append(this.backpackBadge);
-    this.rollButton = this.big('ROLL', DICE_SVG, () => actions.roll(), '');
+    this.rollButton = this.big('ROLL', DICE_SVG, () => actions.roll(), 'E');
     this.rollButton.classList.add('dice-big--roll');
     this.rollCost = el('div', 'dice-rollcost dice-out', `${formatCash(DICE.cost)} / roll`);
     this.autoButton = button('AUTO', 'grey dice-btn--small dice-auto', (event?: unknown) => {
@@ -103,6 +103,8 @@ export class Hud {
       actions.toggleAuto();
     });
     this.autoButton.addEventListener('click', (event) => event.stopPropagation());
+    // Its hotkey, badged like every other button's (hidden in touch mode).
+    this.autoButton.insertAdjacentHTML('beforeend', '<span class="dice-tile__key">Q</span>');
     const autoSell = button('SELL&#9662;', 'red dice-btn--small dice-autosell-btn', () => {
       this.popover.hidden = !this.popover.hidden;
     });
@@ -201,7 +203,8 @@ export class Hud {
   setAuto(on: boolean): void {
     this.autoButton.classList.toggle('is-on', on);
     this.autoButton.classList.toggle('dice-btn--grey', !on);
-    this.autoButton.textContent = on ? 'AUTO ON' : 'AUTO';
+    // innerHTML, not textContent: the Q key badge is part of the label.
+    this.autoButton.innerHTML = `${on ? 'AUTO ON' : 'AUTO'}<span class="dice-tile__key">Q</span>`;
   }
 
   setHint(text: string): void {
