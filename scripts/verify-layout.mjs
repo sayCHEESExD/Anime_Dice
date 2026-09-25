@@ -172,7 +172,7 @@ for (const plot of S.PLOTS) {
   const legs = [
     [front.x, front.z],
     [dir.ux * (L.outer + L.half + 3), dir.uz * (L.outer + L.half + 3)],
-    [dir.ux * (L.inner - L.half - 3), dir.uz * (L.inner - L.half - 3)],
+    [dir.ux * (S.TERRACE.half + 22), dir.uz * (S.TERRACE.half + 22)],
     [dir.ux * (S.TERRACE.half - 12), dir.uz * (S.TERRACE.half - 12)],
   ];
   let total = 0;

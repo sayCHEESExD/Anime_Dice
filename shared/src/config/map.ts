@@ -18,8 +18,8 @@ import { DISPLAY_SLOTS } from './display.js';
  *    plot's own escalator.
  *  - Shops (Upgrades, Sell Units) south of the terrace; leaderboards north; the
  *    dice monument east; the fountain garden west.
- *  - ONE LOOP TRACK (a flat moving conveyor) runs past every plot, in to the
- *    tower and round it, and back out.
+ *  - ONE LOOP TRACK (a flat moving conveyor) runs round the island in front of
+ *    every plot.
  */
 
 // ------------------------------------------------------------------ world
@@ -315,26 +315,17 @@ export const AVENUE_DIRS: readonly AvenueDir[] = [
 // ------------------------------------------------------------ loop track
 
 /**
- * THE LOOP: ONE closed, one-way moving track round the island. An OUTER ring
- * runs past the front of every plot; at the north avenue it turns in, runs
- * down one LEG to an INNER ring round the foot of the terrace, circles the
- * tower, and comes back out up the other leg to where it began. No ends, so
- * no dead end.
+ * THE LOOP: ONE closed, one-way moving track: a square round the island,
+ * running clockwise past the front of every plot, a little way out from them.
+ * No ends, so no dead end.
  *
  * It is a flat conveyor a step high with NO side walls: walk on or off
  * anywhere along it. It is built from the same ramp + conveyor as the
- * escalators (one flat `EscalatorDef` per straight), so the simulation needs
- * nothing new. Each straight OWNS the corner square it leaves from and stops
- * where the next corner square starts, so the pieces tile the track without
- * overlapping and a rider reaching a corner is turned by the next straight.
+ * escalators (flat `EscalatorDef`s), so the simulation needs nothing new.
  */
 export const LOOP = {
-  /** Centre line of the outer ring, from the island centre (plot fronts are at 150). */
-  outer: 138,
-  /** Centre line of the inner ring (the terrace escalator feet are at 56). */
-  inner: 64,
-  /** The legs up the north avenue: centre lines at x = -legX (in) and +legX (out). */
-  legX: 9,
+  /** Centre line of the square, from the island centre. Plot fronts are at 150, so its outer edge is 17 from them. */
+  outer: 128,
   /** Half the track's width. */
   half: 5,
   /** Deck height above the plaza: one easy step. */
@@ -344,22 +335,12 @@ export const LOOP = {
 
 /** The loop's centre line, corner to corner, in travel order (it closes back to the first). */
 export const LOOP_WAYPOINTS: readonly { readonly x: number; readonly z: number }[] = (() => {
-  const { outer: O, inner: I, legX: L } = LOOP;
+  const O = LOOP.outer;
   return [
-    // Out of the east leg and clockwise round the outer ring, past every plot...
-    { x: L, z: O },
+    { x: -O, z: O },
     { x: O, z: O },
     { x: O, z: -O },
     { x: -O, z: -O },
-    { x: -O, z: O },
-    { x: -L, z: O },
-    // ...in down the west leg, anticlockwise round the tower, and back out.
-    { x: -L, z: I },
-    { x: -I, z: I },
-    { x: -I, z: -I },
-    { x: I, z: -I },
-    { x: I, z: I },
-    { x: L, z: I },
   ];
 })();
 

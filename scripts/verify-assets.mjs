@@ -9,7 +9,7 @@
  * at runtime, which is why this list is short and why it stays short.
  */
 import { createHash } from 'node:crypto';
-import { readFileSync, statSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
@@ -33,8 +33,8 @@ const EXPECTED = [
   { path: 'assets/ui/rebirth.png', md5: '022dccdad65f256a546d2a14baf7512a' },
   { path: 'assets/ui/shop.png', md5: 'baf5b63cba7737b79dd63478a11768fa' },
   // The two music tracks (hub and tower battle) and the effects.
-  { path: 'assets/audio/anime music.mp3', md5: '8636ffee5ef91fb369bb6cfc7bd78c39' },
-  { path: 'assets/audio/anime battle music.mp3', md5: '4e0acb5ed3ed3e6a4d61e0da79ca7f62' },
+  { path: 'assets/audio/anime-music.mp3', md5: '8636ffee5ef91fb369bb6cfc7bd78c39' },
+  { path: 'assets/audio/anime-battle-music.mp3', md5: '4e0acb5ed3ed3e6a4d61e0da79ca7f62' },
   { path: 'assets/audio/death.mp3', md5: '180a30391ff7a7cb12e4f05f0f482539' },
   { path: 'assets/audio/fall.mp3', md5: 'a6c361490b027a8effd0ac861936a5a7' },
   { path: 'assets/audio/jump.mp3', md5: '77c58db6921be7b0c7a61903d38bbf30' },
@@ -61,6 +61,25 @@ for (const asset of EXPECTED) {
     failures += 1;
   } else {
     console.log(`  ok    ${asset.path} (${size} bytes)`);
+  }
+}
+
+/*
+ * URL-SAFE NAMES. Every file under assets/ ships to the static host as-is. A
+ * name with a space (or anything else that needs %-encoding) was stored by the
+ * Bloxity host under its ENCODED name and every real request for it answered
+ * 400, which silenced the music on the deployed builds. Letters, digits, dot,
+ * dash and underscore only.
+ */
+const walk = (dir) =>
+  readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
+    entry.isDirectory() ? walk(`${dir}/${entry.name}`) : [`${dir}/${entry.name}`],
+  );
+for (const path of walk(`${root.replace(/\\/g, '/')}assets`)) {
+  const name = path.slice(path.lastIndexOf('/assets/') + 1);
+  if (!/^[A-Za-z0-9._/-]+$/.test(name)) {
+    console.error(`  FAIL  ${name} needs URL-encoding; rename it (letters, digits, . - _ only)`);
+    failures += 1;
   }
 }
 

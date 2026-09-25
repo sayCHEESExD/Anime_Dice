@@ -179,14 +179,18 @@ export const inventoryService = {
     let total = 0;
     let sold = 0;
     let kept = 0;
+    let fromStand = false;
     for (const raw of message.uids.slice(0, MAX_SELL_BATCH)) {
       const uid = uidOf(raw);
       const unit = data.units.get(uid);
       if (!unit) continue;
-      if (unit.k || data.isDisplayed(uid) || data.inTeam(uid)) {
+      // Only the LOCK protects a unit. One on a stand or in the team is taken
+      // off it and sold (removeUnit clears both), as the player asked.
+      if (unit.k) {
         kept += 1;
         continue;
       }
+      if (data.isDisplayed(uid)) fromStand = true;
       total += sellValue(unit);
       data.removeUnit(uid);
       sold += 1;
@@ -195,7 +199,9 @@ export const inventoryService = {
       wallet.add(player, total);
       data.notify('good', `Sold ${sold} unit${sold === 1 ? '' : 's'} for ${formatCash(total)}`);
     }
-    if (kept > 0) data.notify('info', `${kept} locked, displayed or team unit${kept === 1 ? ' was' : 's were'} kept`);
+    // The stand it left is empty now: the public stands and Cash/s follow.
+    if (fromStand) economyService.derive(player, data);
+    if (kept > 0) data.notify('info', `${kept} locked unit${kept === 1 ? ' was' : 's were'} kept. Unlock to sell.`);
     data.privateDirty = true;
   },
 

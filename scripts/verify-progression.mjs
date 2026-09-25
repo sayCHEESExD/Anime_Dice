@@ -94,9 +94,40 @@ const wins = (units, floor, upgrades = {}) => {
   for (let s = 0; s < 200; s += 1) if (S.simulateBattle(S.teamFighters(units, upgrades), S.floorFighters(floor), S.seededRandom(s)).victory) n += 1;
   return n;
 };
-check(wins(team, 1) === 200, 'the reference team always clears floor 1');
-check(wins(team, 12) < 20, 'and cannot clear floor 12');
-check(wins(team, 6, { damage: 10, health: 10 }) > wins(team, 6), 'Damage and Health upgrades win more fights');
+/*
+ * THE TOWER IS A GOAL, NOT A FREEBIE. A new player's best four (from their
+ * first rolls, unlevelled) must not clear even floor 1: the floors ask for a
+ * lot more rolling, levelling and upgrading first.
+ */
+const bestFour = (rolls, level, seed) => {
+  const random = S.seededRandom(seed);
+  const units = [];
+  for (let i = 0; i < rolls; i += 1) units.push({ u: i + 1, c: S.rollCharacter(1, random).id, l: level, p: {}, k: false });
+  const power = (u) => S.unitAttack(u) * S.unitHealth(u);
+  return units.sort((x, y) => power(y) - power(x)).slice(0, 4);
+};
+// Across 60 new players: how many field a team that wins floor 1 at least half the time.
+const clearers = (rolls) => {
+  let n = 0;
+  for (let seed = 1; seed <= 60; seed += 1) {
+    const team = bestFour(rolls, 1, seed);
+    let won = 0;
+    for (let s = 0; s < 30; s += 1) if (S.simulateBattle(S.teamFighters(team, {}), S.floorFighters(1), S.seededRandom(s)).victory) won += 1;
+    if (won >= 15) n += 1;
+  }
+  return n;
+};
+const after30 = clearers(30);
+const after100 = clearers(100);
+const after300 = clearers(300);
+check(after30 <= 3, `floor 1 is out of reach of a starting team: ${after30}/60 can clear it after 30 rolls`);
+check(after100 <= 9, `and of most teams after 100 rolls: ${after100}/60`);
+check(after300 >= 20, `but reachable with more rolling: ${after300}/60 after 300 rolls`);
+check(wins(team, 1) === 0, 'nor can the reference team');
+const grown = bestFour(1000, 10, 7);
+check(wins(grown, 1) === 200, 'a grown team (best of 1000 rolls, level 10) always clears floor 1');
+check(wins(grown, 10) === 0, 'but cannot clear floor 10');
+check(wins(grown, 5, { damage: 10, health: 10 }) > wins(grown, 5), 'Damage and Health upgrades win more fights');
 let lastKo = true;
 for (let s = 0; s < 50; s += 1) {
   const r = S.simulateBattle(S.teamFighters(team, {}), S.floorFighters(2), S.seededRandom(s));

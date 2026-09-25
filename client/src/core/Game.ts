@@ -186,6 +186,10 @@ export class Game {
     this.tower = new TowerWindow(container, this.store, this.network, this.portraits);
     this.tower.onPickSlot = (slot) => this.backpack.pickTeam(slot);
     this.backpack.onTeamPicked = () => this.tower.setOpen(true);
+    this.backpack.onRefuse = (text) => {
+      this.toast(text, 'bad');
+      this.audio.play('refuse');
+    };
     this.rolls = new RollView(container, this.portraits, {
       tick: () => this.audio.play('tick', 0.8),
       landed: (index, fanfare) => {
@@ -230,7 +234,13 @@ export class Game {
     window.addEventListener('keydown', this.onGesture);
     window.addEventListener('pointerdown', this.onGesture);
     window.addEventListener('touchstart', this.onGesture, { passive: true });
-    window.addEventListener('pointerdown', () => this.hud.closePopover());
+    // A click OUTSIDE the Auto-Sell popover closes it; one inside (a checkbox)
+    // or on its own SELL button must not, or nothing in it could be ticked.
+    window.addEventListener('pointerdown', (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      if (target?.closest('.dice-popover, .dice-autosell-btn')) return;
+      this.hud.closePopover();
+    });
     this.renderer.onResize((width, height) => this.camera.setViewport(width, height));
     this.camera.setObstruction((ox, oy, oz, dx, dy, dz) => this.collision.raycast(ox, oy, oz, dx, dy, dz));
     this.camera.setFloor((x, y, z) => this.collision.floorBelow(x, y, z, 0));

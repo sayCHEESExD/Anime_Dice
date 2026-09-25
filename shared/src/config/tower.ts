@@ -73,10 +73,18 @@ const FLOOR_LINEUPS: readonly (readonly string[])[] = [
 
 export const TOWER_FLOORS = FLOOR_LINEUPS.length;
 
-/** Enemy strength curve: a floor's base attack/health. */
+/**
+ * Enemy strength curve: a floor's base attack/health.
+ *
+ * The tower is a GOAL, not something a new player walks up. Floor 1 alone has
+ * ~20x the power of a typical new player's best four (their first ~30 rolls,
+ * unlevelled): about 1 new player in 60 can clear it, 1 in 12 after 100
+ * rolls, two in three after ~300 rolls or some levelling. The gentler growth
+ * keeps the top floor where it was. `npm run verify:progression` pins this.
+ */
 export const TOWER_CURVE = {
-  base: 2,
-  growth: 1.34,
+  base: 90,
+  growth: 1.215,
   /** Fewer guards hit harder: each is scaled by (4 / count) ^ this. */
   fewerExponent: 0.35,
   bossHp: 1.8,

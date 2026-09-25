@@ -404,9 +404,9 @@ export class DiceWorld {
 
   private buildPalms(b: PartBuilder): void {
     const spots: [number, number][] = [];
-    // Two tidy rows of palms along every avenue, between the loop's rings.
+    // Two tidy rows of palms along every avenue, inside the loop.
     for (const dir of AVENUE_DIRS) {
-      for (const r of [86, 106, 126]) {
+      for (const r of [80, 98, 116]) {
         for (const lateral of [-(AVENUE.pathHalf + 5), AVENUE.pathHalf + 5]) spots.push([dir.ux * r + dir.lx * lateral, dir.uz * r + dir.lz * lateral]);
       }
     }
@@ -443,7 +443,7 @@ export class DiceWorld {
   private buildLamps(b: PartBuilder): void {
     const spots: [number, number][] = [];
     for (const dir of AVENUE_DIRS) {
-      for (const r of [76, 96, 116]) {
+      for (const r of [70, 89, 107]) {
         for (const lateral of [-(AVENUE.pathHalf + 2), AVENUE.pathHalf + 2]) spots.push([dir.ux * r + dir.lx * lateral, dir.uz * r + dir.lz * lateral]);
       }
     }

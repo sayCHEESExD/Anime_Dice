@@ -169,6 +169,19 @@ try {
   r.room.send('sell', { uids: [6] });
   await wait(300);
   check(!r.units.has(6) && r.state().cash > before, 'an unlocked, undisplayed unit sells for Cash');
+  {
+    // A unit on a stand sells too: it leaves the stand and Cash/s drops.
+    // The LAST displayed unit: the checks below still use units 1 and 2.
+    const onStand = [...r.priv.display].reverse().find((uid) => uid > 2 && r.units.has(uid) && !r.units.get(uid).k);
+    const cps = r.state().cashPerSec;
+    r.room.send('sell', { uids: [onStand] });
+    await wait(400);
+    check(onStand && !r.units.has(onStand) && !r.priv.display.includes(onStand), 'a displayed unit sells and its stand is emptied');
+    check(r.state().cashPerSec < cps, 'selling a displayed unit lowers Cash/s', `${cps} -> ${r.state().cashPerSec}`);
+    // Fill the emptied stand again for the checks that follow.
+    r.room.send('display', { action: 'best' });
+    await wait(300);
+  }
   const atk0 = S.unitAttack(r.units.get(1));
   r.room.send('usePotion', { uid: 1, potion: 'atk_s' });
   r.room.send('usePotion', { uid: 1, potion: 'level_gem' });

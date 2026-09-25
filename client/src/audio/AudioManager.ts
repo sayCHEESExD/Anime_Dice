@@ -4,8 +4,8 @@ const SCOPE = 'AudioManager';
 
 /** The two supplied tracks: the island's theme and the tower's battle theme. */
 const MUSIC_URL = {
-  hub: '/audio/anime%20music.mp3',
-  battle: '/audio/anime%20battle%20music.mp3',
+  hub: '/audio/anime-music.mp3',
+  battle: '/audio/anime-battle-music.mp3',
 } as const;
 
 export type MusicTrack = keyof typeof MUSIC_URL;

@@ -61,6 +61,8 @@ export class BackpackWindow extends GameWindow {
   private drawnVersion = -1;
   /** Called when the player asks to pick a team member (the tower window listens). */
   onTeamPicked: (() => void) | null = null;
+  /** Say why a tap did nothing (a locked unit in sell mode). */
+  onRefuse: ((text: string) => void) | null = null;
 
   constructor(
     container: HTMLElement,
@@ -219,8 +221,11 @@ export class BackpackWindow extends GameWindow {
     this.store.fresh.delete(uid);
     switch (this.mode.kind) {
       case 'sell':
+        // Stand and team units can be picked (the server takes them off to
+        // sell them); only the lock protects a unit.
         if (this.sellPicks.has(uid)) this.sellPicks.delete(uid);
-        else if (!unit.k && !this.store.isDisplayed(uid) && !this.store.inTeam(uid)) this.sellPicks.add(uid);
+        else if (unit.k) this.onRefuse?.('That unit is locked. Unlock it to sell it.');
+        else this.sellPicks.add(uid);
         break;
       case 'potion':
         this.net.usePotion(uid, this.mode.potion);
@@ -294,7 +299,10 @@ export class BackpackWindow extends GameWindow {
     const levelButton = actions.children[2] as HTMLButtonElement;
     if (!Number.isFinite(cost) || stats.cash < cost) levelButton.classList.add('is-off');
     const sell = actions.children[5] as HTMLButtonElement;
-    if (unit.k || displayed || teamed) sell.disabled = true;
+    if (unit.k) {
+      sell.disabled = true;
+      sell.title = 'Unlock it to sell it';
+    }
   }
 
   // ------------------------------------------------------------------ items

@@ -41,6 +41,7 @@ export const injectDiceStyles = (): void => {
   --safe-b: env(safe-area-inset-bottom, 0px);
 }
 body.dice-dragging { cursor: grabbing; }
+body.dice-cursor-hidden, body.dice-cursor-hidden * { cursor: none !important; }
 
 .dice, .dice * { box-sizing: border-box; font-family: var(--font); font-weight: 700; }
 .dice-out {
@@ -83,17 +84,23 @@ body.dice-dragging { cursor: grabbing; }
 .dice-hud { position: fixed; inset: 0; pointer-events: none; z-index: 20; }
 .dice-hud > * { pointer-events: auto; }
 
-.dice-cash {
+/* The left column: Cash, the chips and the rail, centred on the left edge. */
+.dice-hud > .dice-left {
   position: fixed;
-  left: calc(max(14px, 20 * var(--u)) + var(--safe-l));
-  top: calc(max(10px, 16 * var(--u)) + var(--safe-t));
+  left: calc(max(12px, 18 * var(--u)) + var(--safe-l));
+  top: 50%; transform: translateY(-50%);
+  display: flex; flex-direction: column; align-items: flex-start;
+  gap: calc(12 * var(--u));
+  pointer-events: none;
+}
+.dice-cash {
   display: grid; grid-template-columns: auto auto; column-gap: calc(10 * var(--u)); align-items: center;
   pointer-events: none;
 }
 .dice-cash__icon { grid-row: span 2; width: calc(68 * var(--u)); height: calc(52 * var(--u)); }
 .dice-cash__value { font-size: calc(46 * var(--u)); line-height: 1; color: #6dff5a; }
 .dice-cash__rate { font-size: calc(22 * var(--u)); line-height: 1.1; color: #d6ffcf; }
-.dice-chips { position: fixed; left: calc(max(14px, 20 * var(--u)) + var(--safe-l)); top: calc(max(10px, 16 * var(--u)) + 78 * var(--u) + var(--safe-t)); display: flex; gap: calc(8 * var(--u)); pointer-events: none; }
+.dice-chips { display: flex; gap: calc(8 * var(--u)); pointer-events: none; margin-bottom: calc(10 * var(--u)); }
 .dice-chip {
   display: inline-flex; align-items: center; gap: calc(6 * var(--u));
   padding: calc(3 * var(--u)) calc(12 * var(--u));
@@ -106,9 +113,7 @@ body.dice-dragging { cursor: grabbing; }
 
 /* The left rail. */
 .dice-rail {
-  position: fixed;
-  left: calc(max(12px, 18 * var(--u)) + var(--safe-l));
-  top: 50%; transform: translateY(-42%);
+  pointer-events: auto;
   display: flex; flex-direction: column; gap: calc(16 * var(--u));
 }
 .dice-tile {

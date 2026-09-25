@@ -128,7 +128,11 @@ export class Hud {
 
     this.hint = el('div', 'dice-hint dice-out');
     this.toasts = el('div', 'dice-toasts');
-    this.root.append(cash, chips, rail, bar, this.popover, corner, this.hint, this.toasts);
+    // Cash, the chips and the rail stand together as ONE column at the left
+    // middle, so the figures sit right above the buttons they go with.
+    const left = el('div', 'dice-left');
+    left.append(cash, chips, rail);
+    this.root.append(left, bar, this.popover, corner, this.hint, this.toasts);
     void CLOVER_SVG;
   }
 
