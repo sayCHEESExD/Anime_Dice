@@ -43,6 +43,6 @@ Deploys go to Bloxity Hosting through `.github/workflows/deploy.yml`, under the 
 | `dev` | dev | `wss://anime-dice.dev.host.bloxity.io` | `https://anime-dice.dev.play.bloxity.io` |
 | `main` | prod | `wss://anime-dice.host.bloxity.io` | `https://anime-dice.play.bloxity.io` |
 
-The workflow builds the server image from the repository root (`Dockerfile`) and rolls it through Legion. It then builds the client with that channel's backend URL and uploads it as a zip. It needs one repository secret: `LEGION_DEPLOY_TOKEN`. Legion injects `PORT`, `MONGODB_URI`, `BLOXITY_GAME_ID` and `POD_NAME`. The Bux SKUs `cash_small` ($25,000) and `cash_large` ($250,000) have to exist in the game's Bloxity catalogue.
+The workflow builds the server image from the repository root (`Dockerfile`) and rolls it through Legion. It then builds the client with that channel's backend URL and uploads it as a zip. It needs one repository secret: `LEGION_DEPLOY_TOKEN`. After the first run, make the `anime-dice-server` package public on GitHub (Packages → Package settings → Change visibility), because Legion pulls the image without credentials. Legion injects `PORT`, `MONGODB_URI`, `BLOXITY_GAME_ID` and `POD_NAME`. The Bux SKUs `cash_small` ($25,000) and `cash_large` ($250,000) have to exist in the game's Bloxity catalogue.
 
 See `CLAUDE.md` for the layout, the rules that must not drift, and where everything lives.

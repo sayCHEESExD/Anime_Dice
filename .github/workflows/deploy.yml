@@ -1,7 +1,7 @@
 # Deploy to Bloxity Hosting.
 #
 #   dev            -> Bloxity "dev" channel
-#   main / master  -> Bloxity "prod" channel
+#   main           -> Bloxity "prod" channel
 #
 # Two halves, because the game is two things: a Colyseus server that runs as a
 # long-lived container, and a static Vite build. The server image goes to GHCR
@@ -133,7 +133,10 @@ jobs:
             fi
             echo "Pushing to ${LOGIN}'s own namespace (GHCR_PUSH_TOKEN)."
           else
-            LOGIN="${{ github.actor }}"
+            # The REPOSITORY OWNER, not github.actor: the built-in token may only
+            # publish under the owner's namespace, so a push by a collaborator
+            # would otherwise be refused by GHCR.
+            LOGIN="${{ github.repository_owner }}"
             echo "Pushing to the repository owner's namespace (GITHUB_TOKEN)."
           fi
           OWNER=$(echo "$LOGIN" | tr '[:upper:]' '[:lower:]')
@@ -147,7 +150,8 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ steps.image.outputs.user }}
+          # The PAT's own login when there is one; github.actor with the built-in token, as documented.
+          username: ${{ secrets.GHCR_PUSH_TOKEN != '' && steps.image.outputs.user || github.actor }}
           # The personal push token when there is one, else the run's own token.
           password: ${{ secrets.GHCR_PUSH_TOKEN || secrets.GITHUB_TOKEN }}
 
